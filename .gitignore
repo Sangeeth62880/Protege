@@ -1,0 +1,22 @@
+# General
+.DS_Store
+.idea
+*.iml
+*.log
+
+# Python / Backend
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+.pytest_cache/
+
+# Flutter / Frontend
+protege_app/.dart_tool/
+protege_app/.idea/
+protege_app/build/
+protege_app/.pub/
+protege_app/.packages
+protege_app/.flutter-plugins
+protege_app/.flutter-plugins-dependencies

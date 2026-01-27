@@ -1,0 +1,201 @@
+{
+  "topic": "Python for Data Science",
+  "description": "Build a strong foundation in Python programming and data science to analyze Kaggle datasets",
+  "total_duration_hours": 24.0,
+  "difficulty": "beginner",
+  "prerequisites": [
+    "Basic computer skills",
+    "Familiarity with data concepts"
+  ],
+  "modules": [
+    {
+      "module_number": 1,
+      "title": "Introduction to Python",
+      "description": "Learn the basics of Python programming",
+      "duration_hours": 4.0,
+      "lessons": [
+        {
+          "lesson_number": 1,
+          "title": "Introduction to Python Basics",
+          "description": "Learn the syntax and data types of Python",
+          "duration_minutes": 45,
+          "learning_objectives": [
+            "Understand Python syntax",
+            "Learn basic data types"
+          ],
+          "key_concepts": [
+            "Variables",
+            "Data types",
+            "Control structures"
+          ],
+          "search_queries": {
+            "youtube": "Python basics for beginners",
+            "articles": "Introduction to Python programming",
+            "github": null
+          },
+          "completed": false,
+          "video_resource_ids": [],
+          "article_resource_ids": []
+        },
+        {
+          "lesson_number": 2,
+          "title": "Python Control Structures",
+          "description": "Learn about conditional statements and loops in Python",
+          "duration_minutes": 45,
+          "learning_objectives": [
+            "Understand if-else statements",
+            "Learn about for loops"
+          ],
+          "key_concepts": [
+            "If-else statements",
+            "For loops",
+            "While loops"
+          ],
+          "search_queries": {
+            "youtube": "Python control structures tutorial",
+            "articles": "Python loops and conditional statements",
+            "github": null
+          },
+          "completed": false,
+          "video_resource_ids": [],
+          "article_resource_ids": []
+        },
+        {
+          "lesson_number": 3,
+          "title": "Functions in Python",
+          "description": "Learn about functions and modules in Python",
+          "duration_minutes": 45,
+          "learning_objectives": [
+            "Understand functions",
+            "Learn about modules"
+          ],
+          "key_concepts": [
+            "Functions",
+            "Modules",
+            "Arguments"
+          ],
+          "search_queries": {
+            "youtube": "Python functions tutorial",
+            "articles": "Introduction to Python modules",
+            "github": null
+          },
+          "completed": false,
+          "video_resource_ids": [],
+          "article_resource_ids": []
+        }
+      ],
+      "completed": false
+    },
+    {
+      "module_number": 2,
+      "title": "Data Structures in Python",
+      "description": "Learn about lists, tuples, and dictionaries in Python",
+      "duration_hours": 4.0,
+      "lessons": [
+        {
+          "lesson_number": 1,
+          "title": "Lists in Python",
+          "description": "Learn about lists and their operations",
+          "duration_minutes": 45,
+          "learning_objectives": [
+            "Understand lists",
+            "Learn about list operations"
+          ],
+          "key_concepts": [
+            "Lists",
+            "Indexing",
+            "Slicing"
+          ],
+          "search_queries": {
+            "youtube": "Python lists tutorial",
+            "articles": "Introduction to Python lists",
+            "github": null
+          },
+          "completed": false,
+          "video_resource_ids": [],
+          "article_resource_ids": []
+        },
+        {
+          "lesson_number": 2,
+          "title": "Tuples and Dictionaries",
+          "description": "Learn about tuples and dictionaries in Python",
+          "duration_minutes": 45,
+          "learning_objectives": [
+            "Understand tuples",
+            "Learn about dictionaries"
+          ],
+          "key_concepts": [
+            "Tuples",
+            "Dictionaries",
+            "Keys"
+          ],
+          "search_queries": {
+            "youtube": "Python tuples and dictionaries tutorial",
+            "articles": "Introduction to Python tuples and dictionaries",
+            "github": null
+          },
+          "completed": false,
+          "video_resource_ids": [],
+          "article_resource_ids": []
+        },
+        {
+          "lesson_number": 3,
+          "title": "Sets and Other Data Structures",
+          "description": "Learn about sets and other data structures in Python",
+          "duration_minutes": 45,
+          "learning_objectives": [
+            "Understand sets",
+            "Learn about other data structures"
+          ],
+          "key_concepts": [
+            "Sets",
+            "Frozensets",
+            "Other data structures"
+          ],
+          "search_queries": {
+            "youtube": "Python sets tutorial",
+            "articles": "Introduction to Python sets and other data structures",
+            "github": null
+          },
+          "completed": false,
+          "video_resource_ids": [],
+          "article_resource_ids": []
+        }
+      ],
+      "completed": false
+    },
+    {
+      "module_number": 3,
+      "title": "Data Analysis with Pandas",
+      "description": "Learn about data analysis using Pandas library",
+      "duration_hours": 6.0,
+      "lessons": [
+        {
+          "lesson_number": 1,
+          "title": "Introduction to Pandas",
+          "description": "Learn about the basics of Pandas library",
+          "duration_minutes": 45,
+          "learning_objectives": [
+            "Understand Pandas basics",
+            "Learn about data frames"
+          ],
+          "key_concepts": [
+            "Pandas",
+            "Data frames",
+            "Series"
+          ],
+          "search_queries": {
+            "youtube": "Pandas tutorial for beginners",
+            "articles": "Introduction to Pandas library",
+            "github": null
+          },
+          "completed": false,
+          "video_resource_ids": [],
+          "article_resource_ids": []
+        }
+      ],
+      "completed": false
+    }
+  ],
+  "capstone_project": null
+}
