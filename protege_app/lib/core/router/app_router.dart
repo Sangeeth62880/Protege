@@ -14,6 +14,7 @@ import 'package:protege_app/presentation/screens/explore/syllabus_loading_screen
 import 'package:protege_app/presentation/screens/explore/syllabus_preview_screen.dart';
 import '../../presentation/screens/tutor/tutor_chat_screen.dart';
 import '../../presentation/screens/lesson/lesson_screen.dart';
+import '../../presentation/screens/quiz/quiz_screen.dart';
 import '../../providers/auth_provider.dart';
 
 // Private navigator keys
@@ -187,6 +188,19 @@ class AppRouter {
               },
             ),
           ],
+        ),
+
+        GoRoute(
+          path: '/quiz/:lessonId',
+          builder: (context, state) {
+            final lessonId = state.pathParameters['lessonId'];
+            final extra = state.extra as Map<String, dynamic>?;
+            return QuizScreen(
+              lessonId: lessonId,
+              topic: extra?['topic'],
+              lessonTitle: extra?['lessonTitle'],
+            );
+          },
         ),
       ],
     );

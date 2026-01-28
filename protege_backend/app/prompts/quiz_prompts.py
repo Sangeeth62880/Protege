@@ -1,58 +1,72 @@
 """
-Quiz Generation Prompts
+Quiz Generation Prompt Templates
 """
 
-QUIZ_GENERATION_PROMPT = """Generate {count} quiz questions about: "{topic}"
+QUIZ_SYSTEM_PROMPT = """You are an expert educational quiz creator for Protégé.
+Your job is to create engaging, educational quizzes that test understanding.
 
-Difficulty: {difficulty}
+QUIZ REQUIREMENTS:
+1. Questions should test understanding, not just memorization
+2. Include a mix of difficulty levels
+3. Each question must have a clear correct answer
+4. Explanations should teach, not just state the answer
+5. For programming topics, include code-based questions
 
-Return a JSON array with this exact structure:
-[
+OUTPUT FORMAT:
+You must respond with valid JSON only. No additional text.
+"""
+
+QUIZ_GENERATION_TEMPLATE = """Create a quiz for:
+
+TOPIC: {topic}
+LESSON: {lesson_title}
+CONCEPTS TO TEST: {key_concepts}
+DIFFICULTY LEVEL: {difficulty}
+NUMBER OF QUESTIONS: {num_questions}
+QUESTION TYPES: {question_types}
+
+Return JSON with this exact structure:
+{{
+  "quiz_title": "Quiz: {lesson_title}",
+  "total_questions": {num_questions},
+  "estimated_time_minutes": <number>,
+  "questions": [
     {{
-        "question": "The question text",
-        "type": "multipleChoice",
-        "options": ["Option A", "Option B", "Option C", "Option D"],
-        "correct_answer": "The correct option text",
-        "explanation": "Why this is the correct answer",
-        "points": 1
+      "question_number": 1,
+      "question_type": "multiple_choice",
+      "difficulty": "easy|medium|hard",
+      "question_text": "The question here?",
+      "options": ["A) Option 1", "B) Option 2", "C) Option 3", "D) Option 4"],
+      "correct_answer": "A",
+      "explanation": "Detailed explanation of why A is correct and why others are wrong.",
+      "concept_tested": "variable assignment"
+    }},
+    {{
+      "question_number": 2,
+      "question_type": "true_false",
+      "difficulty": "easy",
+      "question_text": "Statement to evaluate",
+      "correct_answer": "true",
+      "explanation": "Why this is true/false"
+    }},
+    {{
+      "question_number": 3,
+      "question_type": "fill_blank",
+      "difficulty": "medium",
+      "question_text": "A _____ is used to store data in Python.",
+      "correct_answer": "variable",
+      "acceptable_answers": ["variable", "var"],
+      "explanation": "Explanation here"
+    }},
+    {{
+      "question_number": 4,
+      "question_type": "code_completion",
+      "difficulty": "hard",
+      "question_text": "Complete the code to print 'Hello World':",
+      "code_template": "_____(\"Hello World\")",
+      "correct_answer": "print",
+      "explanation": "The print() function outputs text to the console"
     }}
-]
-
-Guidelines:
-1. Mix question types (mostly multiple choice, some true/false)
-2. Make incorrect options plausible
-3. Cover different aspects of the topic
-4. Provide clear, educational explanations
-5. Vary difficulty within the set
-
-For true/false questions, use:
-{{
-    "question": "Statement to evaluate",
-    "type": "trueFalse",
-    "options": ["True", "False"],
-    "correct_answer": "True" or "False",
-    "explanation": "Explanation",
-    "points": 1
+  ]
 }}
-
-Return ONLY the JSON array, no additional text."""
-
-
-QUESTION_EVALUATION_PROMPT = """Evaluate this answer:
-
-Question: {question}
-User's Answer: {user_answer}
-Correct Answer: {correct_answer}
-
-Is the user's answer correct? Consider:
-1. Exact match (definitely correct)
-2. Semantically equivalent (likely correct)
-3. Partially correct (some points)
-4. Incorrect
-
-Respond with JSON:
-{{
-    "is_correct": true/false,
-    "score": 0.0 to 1.0,
-    "feedback": "Brief explanation"
-}}"""
+"""

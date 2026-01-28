@@ -1,176 +1,139 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../data/repositories/quiz_repository.dart';
 import '../data/models/quiz_model.dart';
-// import '../data/models/quiz_result_model.dart'; // Removed: defined in quiz_model.dart
-import 'auth_provider.dart';
-// import 'learning_provider.dart'; // Unused
-import 'api_provider.dart';
+import '../data/services/quiz_api_service.dart';
 
-/// Quiz repository provider
-final quizRepositoryProvider = Provider<QuizRepository>((ref) {
-  final apiService = ref.watch(apiServiceProvider);
-  return QuizRepository(apiService: apiService);
+// Service Provider
+final quizApiServiceProvider = Provider<QuizApiService>((ref) {
+  return QuizApiService();
 });
 
-/// Quiz state
+// State
 class QuizState {
-  final QuizModel? quiz;
+  final bool isLoading;
+  final QuizModel? currentQuiz;
   final int currentQuestionIndex;
-  final List<String> userAnswers;
-  final bool isSubmitting;
-  final QuizResultModel? result;
+  final Map<int, String> userAnswers; // questionNumber -> answer
+  final QuizResultModel? quizResult;
+  final String? error;
+  final int timeElapsed; // for timer
 
   const QuizState({
-    this.quiz,
+    this.isLoading = false,
+    this.currentQuiz,
     this.currentQuestionIndex = 0,
-    this.userAnswers = const [],
-    this.isSubmitting = false,
-    this.result,
+    this.userAnswers = const {},
+    this.quizResult,
+    this.error,
+    this.timeElapsed = 0,
   });
 
   QuizState copyWith({
-    QuizModel? quiz,
+    bool? isLoading,
+    QuizModel? currentQuiz,
     int? currentQuestionIndex,
-    List<String>? userAnswers,
-    bool? isSubmitting,
-    QuizResultModel? result,
+    Map<int, String>? userAnswers,
+    QuizResultModel? quizResult,
+    String? error,
+    int? timeElapsed,
   }) {
     return QuizState(
-      quiz: quiz ?? this.quiz,
+      isLoading: isLoading ?? this.isLoading,
+      currentQuiz: currentQuiz ?? this.currentQuiz,
       currentQuestionIndex: currentQuestionIndex ?? this.currentQuestionIndex,
       userAnswers: userAnswers ?? this.userAnswers,
-      isSubmitting: isSubmitting ?? this.isSubmitting,
-      result: result ?? this.result,
+      quizResult: quizResult ?? this.quizResult,
+      error: error, // if null passed, error is cleared? or keep? 
+                    // Usually we want to clear error if not provided explicitly or logic dictates
+                    // Here I'll assume if it's passed as null it stays null unless I use a nullable wrapper.
+                    // Simplified: error is cleared if I pass null explicitly? 
+                    // Let's rely on constructor defaults or explicit updates.
+      timeElapsed: timeElapsed ?? this.timeElapsed,
     );
   }
 
-  QuestionModel? get currentQuestion =>
-      quiz != null && currentQuestionIndex < quiz!.questions.length
-          ? quiz!.questions[currentQuestionIndex]
-          : null;
-
-  bool get isLastQuestion =>
-      quiz != null && currentQuestionIndex >= quiz!.questions.length - 1;
-
-  double get progress => quiz != null && quiz!.questions.isNotEmpty
-      ? (currentQuestionIndex + 1) / quiz!.questions.length
-      : 0;
+  // Clear error convenience
+  QuizState clearError() => QuizState(
+    isLoading: isLoading,
+    currentQuiz: currentQuiz,
+    currentQuestionIndex: currentQuestionIndex,
+    userAnswers: userAnswers,
+    quizResult: quizResult,
+    error: null,
+    timeElapsed: timeElapsed,
+  );
 }
 
-/// Quiz notifier
-class QuizNotifier extends StateNotifier<AsyncValue<QuizState>> {
-  final QuizRepository _quizRepository;
-  final String? _userId;
-  DateTime? _startTime;
+// Notifier
+class QuizNotifier extends StateNotifier<QuizState> {
+  final QuizApiService _apiService;
 
-  QuizNotifier(this._quizRepository, this._userId)
-      : super(const AsyncValue.data(QuizState()));
+  QuizNotifier(this._apiService) : super(const QuizState());
 
   Future<void> generateQuiz({
-    required String lessonId,
     required String topic,
-    required String difficulty,
-    int? questionCount,
+    required String lessonTitle,
+    required List<String> keyConcepts,
+    String difficulty = "mixed",
   }) async {
-    state = const AsyncValue.loading();
+    state = state.copyWith(isLoading: true, error: null, quizResult: null, currentQuestionIndex: 0, userAnswers: {});
     try {
-      final quiz = await _quizRepository.generateQuiz(
-        lessonId: lessonId,
-        topic: topic,
+      final quiz = await _apiService.generateQuiz(
+        topic: topic, 
+        lessonTitle: lessonTitle, 
+        keyConcepts: keyConcepts,
         difficulty: difficulty,
-        questionCount: questionCount,
       );
-      _startTime = DateTime.now();
-      state = AsyncValue.data(QuizState(
-        quiz: quiz,
-        userAnswers: List.filled(quiz.questions.length, ''),
-      ));
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
+      state = state.copyWith(isLoading: false, currentQuiz: quiz);
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
 
-  void answerQuestion(String answer) {
-    final currentState = state.valueOrNull;
-    if (currentState == null) return;
-
-    final updatedAnswers = List<String>.from(currentState.userAnswers);
-    updatedAnswers[currentState.currentQuestionIndex] = answer;
-
-    state = AsyncValue.data(currentState.copyWith(userAnswers: updatedAnswers));
+  void selectAnswer(int questionNumber, String answer) {
+    final newAnswers = Map<int, String>.from(state.userAnswers);
+    newAnswers[questionNumber] = answer;
+    state = state.copyWith(userAnswers: newAnswers);
   }
 
   void nextQuestion() {
-    final currentState = state.valueOrNull;
-    if (currentState == null || currentState.isLastQuestion) return;
-
-    state = AsyncValue.data(currentState.copyWith(
-      currentQuestionIndex: currentState.currentQuestionIndex + 1,
-    ));
-  }
-
-  void previousQuestion() {
-    final currentState = state.valueOrNull;
-    if (currentState == null || currentState.currentQuestionIndex <= 0) return;
-
-    state = AsyncValue.data(currentState.copyWith(
-      currentQuestionIndex: currentState.currentQuestionIndex - 1,
-    ));
-  }
-
-  Future<QuizResultModel?> submitQuiz() async {
-    final currentState = state.valueOrNull;
-    if (currentState?.quiz == null || _userId == null) return null;
-
-    state = AsyncValue.data(currentState!.copyWith(isSubmitting: true));
-
-    try {
-      final timeTaken = _startTime != null
-          ? DateTime.now().difference(_startTime!)
-          : const Duration(minutes: 5);
-
-      final answers = currentState.quiz!.questions
-          .asMap()
-          .entries
-          .map((entry) => AnswerModel(
-                questionId: entry.value.id,
-                userAnswer: currentState.userAnswers[entry.key],
-                isCorrect: _quizRepository.checkAnswer(
-                  entry.value,
-                  currentState.userAnswers[entry.key],
-                ),
-              ))
-          .toList();
-
-      final result = await _quizRepository.submitQuiz(
-        quizId: currentState.quiz!.id,
-        userId: _userId!,
-        answers: answers,
-        timeTaken: timeTaken,
-      );
-
-      state = AsyncValue.data(currentState.copyWith(
-        isSubmitting: false,
-        result: result,
-      ));
-
-      return result;
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-      return null;
+    if (state.currentQuiz != null && state.currentQuestionIndex < state.currentQuiz!.questions.length - 1) {
+      state = state.copyWith(currentQuestionIndex: state.currentQuestionIndex + 1);
     }
   }
 
+  void prevQuestion() {
+    if (state.currentQuestionIndex > 0) {
+      state = state.copyWith(currentQuestionIndex: state.currentQuestionIndex - 1);
+    }
+  }
+
+  Future<void> submitQuiz() async {
+    if (state.currentQuiz == null) return;
+    
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final result = await _apiService.submitQuiz(
+        quizId: state.currentQuiz!.quizId ?? "",
+        answers: state.userAnswers,
+        timeTakenSeconds: state.timeElapsed, // Assuming managed externally or updated
+      );
+      state = state.copyWith(isLoading: false, quizResult: result);
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+    }
+  }
+  
+  void updateTimer(int seconds) {
+    state = state.copyWith(timeElapsed: seconds);
+  }
+
   void reset() {
-    _startTime = null;
-    state = const AsyncValue.data(QuizState());
+    state = const QuizState();
   }
 }
 
-/// Quiz provider
-final quizProvider =
-    StateNotifierProvider<QuizNotifier, AsyncValue<QuizState>>((ref) {
-  final quizRepo = ref.watch(quizRepositoryProvider);
-  final currentUser = ref.watch(currentUserProvider);
-  return QuizNotifier(quizRepo, currentUser?.uid);
+// Provider
+final quizProvider = StateNotifierProvider<QuizNotifier, QuizState>((ref) {
+  final apiService = ref.watch(quizApiServiceProvider);
+  return QuizNotifier(apiService);
 });

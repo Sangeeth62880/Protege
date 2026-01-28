@@ -1,184 +1,161 @@
-/// Quiz model for assessments
+/// Quiz model matching backend structure
 class QuizModel {
-  final String id;
-  final String lessonId;
-  final String topic;
+  final String? quizId;
+  final String quizTitle;
+  final String? lessonId;
+  final int totalQuestions;
+  final int estimatedTimeMinutes;
   final List<QuestionModel> questions;
-  final int timeLimit; // in seconds, 0 for no limit
-  final DateTime createdAt;
 
   const QuizModel({
-    required this.id,
-    required this.lessonId,
-    required this.topic,
+    this.quizId,
+    required this.quizTitle,
+    this.lessonId,
+    required this.totalQuestions,
+    required this.estimatedTimeMinutes,
     required this.questions,
-    this.timeLimit = 0,
-    required this.createdAt,
   });
 
   factory QuizModel.fromJson(Map<String, dynamic> json) {
     return QuizModel(
-      id: json['id'] as String,
-      lessonId: json['lessonId'] as String,
-      topic: json['topic'] as String,
+      quizId: json['quiz_id'] as String?,
+      quizTitle: json['quiz_title'] as String,
+      lessonId: json['lesson_id'] as String?,
+      totalQuestions: json['total_questions'] as int,
+      estimatedTimeMinutes: json['estimated_time_minutes'] as int,
       questions: (json['questions'] as List<dynamic>)
           .map((e) => QuestionModel.fromJson(e as Map<String, dynamic>))
           .toList(),
-      timeLimit: json['timeLimit'] as int? ?? 0,
-      createdAt: DateTime.parse(json['createdAt'] as String),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
-      'lessonId': lessonId,
-      'topic': topic,
+      'quiz_id': quizId,
+      'quiz_title': quizTitle,
+      'lesson_id': lessonId,
+      'total_questions': totalQuestions,
+      'estimated_time_minutes': estimatedTimeMinutes,
       'questions': questions.map((e) => e.toJson()).toList(),
-      'timeLimit': timeLimit,
-      'createdAt': createdAt.toIso8601String(),
     };
   }
-
-  int get totalQuestions => questions.length;
 }
 
-/// Individual question model
 class QuestionModel {
-  final String id;
-  final String question;
-  final QuestionType type;
-  final List<String> options; // for multiple choice
+  final int questionNumber;
+  final String questionType;
+  final String difficulty;
+  final String questionText;
+  final List<String>? options;
   final String correctAnswer;
-  final String? explanation;
-  final int points;
+  final List<String>? acceptableAnswers;
+  final String? codeTemplate;
+  final String explanation;
+  final String? conceptTested;
 
   const QuestionModel({
-    required this.id,
-    required this.question,
-    required this.type,
-    this.options = const [],
+    required this.questionNumber,
+    required this.questionType,
+    required this.difficulty,
+    required this.questionText,
+    this.options,
     required this.correctAnswer,
-    this.explanation,
-    this.points = 1,
+    this.acceptableAnswers,
+    this.codeTemplate,
+    required this.explanation,
+    this.conceptTested,
   });
 
   factory QuestionModel.fromJson(Map<String, dynamic> json) {
     return QuestionModel(
-      id: json['id'] as String,
-      question: json['question'] as String,
-      type: QuestionType.values.firstWhere(
-        (e) => e.name == json['type'],
-        orElse: () => QuestionType.multipleChoice,
-      ),
-      options: List<String>.from(json['options'] ?? []),
-      correctAnswer: json['correctAnswer'] as String,
-      explanation: json['explanation'] as String?,
-      points: json['points'] as int? ?? 1,
+      questionNumber: json['question_number'] as int,
+      questionType: json['question_type'] as String,
+      difficulty: json['difficulty'] as String,
+      questionText: json['question_text'] as String,
+      options: (json['options'] as List<dynamic>?)?.map((e) => e as String).toList(),
+      correctAnswer: json['correct_answer'] as String,
+      acceptableAnswers: (json['acceptable_answers'] as List<dynamic>?)?.map((e) => e as String).toList(),
+      codeTemplate: json['code_template'] as String?,
+      explanation: json['explanation'] as String,
+      conceptTested: json['concept_tested'] as String?,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
-      'question': question,
-      'type': type.name,
+      'question_number': questionNumber,
+      'question_type': questionType,
+      'difficulty': difficulty,
+      'question_text': questionText,
       'options': options,
-      'correctAnswer': correctAnswer,
+      'correct_answer': correctAnswer,
+      'acceptable_answers': acceptableAnswers,
+      'code_template': codeTemplate,
       'explanation': explanation,
-      'points': points,
+      'concept_tested': conceptTested,
     };
   }
 }
 
-/// Types of quiz questions
-enum QuestionType {
-  multipleChoice,
-  trueFalse,
-  shortAnswer,
-  fillBlank,
-}
-
-/// Quiz result model
 class QuizResultModel {
-  final String id;
   final String quizId;
   final String userId;
   final int score;
-  final int totalPoints;
-  final List<AnswerModel> answers;
-  final Duration timeTaken;
-  final DateTime completedAt;
+  final int correctCount;
+  final int totalQuestions;
+  final int timeTakenSeconds;
+  final List<QuestionResultModel> questionResults;
+  final bool passed;
 
   const QuizResultModel({
-    required this.id,
     required this.quizId,
     required this.userId,
     required this.score,
-    required this.totalPoints,
-    required this.answers,
-    required this.timeTaken,
-    required this.completedAt,
+    required this.correctCount,
+    required this.totalQuestions,
+    required this.timeTakenSeconds,
+    required this.questionResults,
+    required this.passed,
   });
-
-  double get percentage => totalPoints > 0 ? (score / totalPoints) * 100 : 0;
-
-  bool get passed => percentage >= 70;
 
   factory QuizResultModel.fromJson(Map<String, dynamic> json) {
     return QuizResultModel(
-      id: json['id'] as String,
-      quizId: json['quizId'] as String,
-      userId: json['userId'] as String,
+      quizId: json['quiz_id'] as String,
+      userId: json['user_id'] as String,
       score: json['score'] as int,
-      totalPoints: json['totalPoints'] as int,
-      answers: (json['answers'] as List<dynamic>)
-          .map((e) => AnswerModel.fromJson(e as Map<String, dynamic>))
+      correctCount: json['correct_count'] as int,
+      totalQuestions: json['total_questions'] as int,
+      timeTakenSeconds: json['time_taken_seconds'] as int,
+      questionResults: (json['question_results'] as List<dynamic>)
+          .map((e) => QuestionResultModel.fromJson(e as Map<String, dynamic>))
           .toList(),
-      timeTaken: Duration(seconds: json['timeTakenSeconds'] as int),
-      completedAt: DateTime.parse(json['completedAt'] as String),
+      passed: json['passed'] as bool,
     );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'quizId': quizId,
-      'userId': userId,
-      'score': score,
-      'totalPoints': totalPoints,
-      'answers': answers.map((e) => e.toJson()).toList(),
-      'timeTakenSeconds': timeTaken.inSeconds,
-      'completedAt': completedAt.toIso8601String(),
-    };
   }
 }
 
-/// Individual answer model
-class AnswerModel {
-  final String questionId;
+class QuestionResultModel {
+  final int questionNumber;
   final String userAnswer;
+  final String correctAnswer;
   final bool isCorrect;
+  final String? explanation;
 
-  const AnswerModel({
-    required this.questionId,
+  const QuestionResultModel({
+    required this.questionNumber,
     required this.userAnswer,
+    required this.correctAnswer,
     required this.isCorrect,
+    this.explanation,
   });
 
-  factory AnswerModel.fromJson(Map<String, dynamic> json) {
-    return AnswerModel(
-      questionId: json['questionId'] as String,
-      userAnswer: json['userAnswer'] as String,
-      isCorrect: json['isCorrect'] as bool,
+  factory QuestionResultModel.fromJson(Map<String, dynamic> json) {
+    return QuestionResultModel(
+      questionNumber: json['question_number'] as int,
+      userAnswer: json['user_answer'] as String,
+      correctAnswer: json['correct_answer'] as String,
+      isCorrect: json['is_correct'] as bool,
+      explanation: json['explanation'] as String?,
     );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'questionId': questionId,
-      'userAnswer': userAnswer,
-      'isCorrect': isCorrect,
-    };
   }
 }

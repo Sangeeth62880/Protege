@@ -22,7 +22,9 @@ class _SyllabusPreviewScreenState extends ConsumerState<SyllabusPreviewScreen> {
     
     if (path != null && mounted) {
       // Clear navigation stack and go to the path
-      context.go('/learn/${path.id}');
+      // Use push to preserve history or go to home then push
+      // Simple fix: push so 'Back' works (returns to Preview, which is acceptable)
+      context.push('/learn/${path.id}');
     } else {
        ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

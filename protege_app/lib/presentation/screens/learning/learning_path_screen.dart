@@ -72,7 +72,13 @@ class _PathContent extends StatelessWidget {
           pinned: true,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios),
-            onPressed: () => context.pop(),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/home');
+              }
+            },
           ),
           flexibleSpace: FlexibleSpaceBar(
             title: Text(

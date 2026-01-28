@@ -80,7 +80,14 @@ class _LessonScreenState extends ConsumerState<LessonScreen> {
         title: const Text('Lesson'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              // Fallback to home or parent path if possible
+              context.go('/home');
+            }
+          },
         ),
       ),
       body: pathAsync.when(
@@ -174,9 +181,16 @@ class _LessonScreenState extends ConsumerState<LessonScreen> {
                   children: [
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: lesson.quizId != null 
-                            ? () => context.push('/quiz/${lesson.quizId}') 
-                            : null, // Disable if no quiz
+                        onPressed: () {
+                          // Always allow taking a quiz - it will generate if needed
+                          context.push(
+                            '/quiz/${lesson.id}',
+                            extra: {
+                              'topic': path?.topic ?? 'General', // Fallback topic
+                              'lessonTitle': lesson.title,
+                            }
+                          );
+                        },
                         icon: const Icon(Icons.quiz_rounded),
                         label: const Text('Take Quiz'),
                         style: OutlinedButton.styleFrom(
