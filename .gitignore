@@ -21,6 +21,7 @@ protege_app/.pub/
 protege_app/.packages
 protege_app/.flutter-plugins
 protege_app/.flutter-plugins-dependencies
+protege_app/lib/firebase_options.dart
 
 # JDK
 jdk-21/
