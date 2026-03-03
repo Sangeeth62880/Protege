@@ -237,3 +237,59 @@ final learningProgressProvider =
   final learningRepo = ref.watch(learningRepositoryProvider);
   return LearningProgressNotifier(learningRepo);
 });
+
+// ─── Lesson Content Provider ─────────────────────────────────────────────
+
+/// Params for lesson content generation
+class LessonContentParams {
+  final String pathId;
+  final String topic;
+  final String moduleTitle;
+  final String lessonTitle;
+  final String lessonDescription;
+  final List<String> keyConcepts;
+  final String difficulty;
+  final int moduleNumber;
+  final int lessonNumber;
+
+  const LessonContentParams({
+    required this.pathId,
+    required this.topic,
+    required this.moduleTitle,
+    required this.lessonTitle,
+    this.lessonDescription = '',
+    this.keyConcepts = const [],
+    this.difficulty = 'beginner',
+    required this.moduleNumber,
+    required this.lessonNumber,
+  });
+
+  /// Unique key for provider caching
+  String get key => '${pathId}_${moduleNumber}_$lessonNumber';
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is LessonContentParams && other.key == key;
+
+  @override
+  int get hashCode => key.hashCode;
+}
+
+/// Provider that fetches AI-generated lesson content (with Firestore cache on backend)
+final lessonContentProvider = FutureProvider.family<Map<String, dynamic>, LessonContentParams>(
+  (ref, params) async {
+    final learningRepo = ref.watch(learningRepositoryProvider);
+    return await learningRepo.generateLessonContent(
+      topic: params.topic,
+      moduleTitle: params.moduleTitle,
+      lessonTitle: params.lessonTitle,
+      lessonDescription: params.lessonDescription,
+      keyConcepts: params.keyConcepts,
+      difficulty: params.difficulty,
+      pathId: params.pathId,
+      moduleNumber: params.moduleNumber,
+      lessonNumber: params.lessonNumber,
+    );
+  },
+);

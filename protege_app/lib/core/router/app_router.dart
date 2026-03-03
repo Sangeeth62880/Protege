@@ -15,12 +15,20 @@ import 'package:protege_app/presentation/screens/explore/syllabus_preview_screen
 import '../../presentation/screens/tutor/tutor_chat_screen.dart';
 import '../../presentation/screens/lesson/lesson_screen.dart';
 import '../../presentation/screens/quiz/quiz_screen.dart';
+import '../../presentation/screens/teach/teach_home_screen.dart';
+import '../../presentation/screens/teach/teach_session_screen.dart';
+import '../../presentation/screens/progress/progress_screen.dart';
+import '../../presentation/screens/documents/documents_screen.dart';
+import '../../presentation/screens/documents/document_upload_screen.dart';
+import '../../presentation/screens/documents/document_view_screen.dart';
+import '../../presentation/screens/documents/document_chat_screen.dart';
 import '../../providers/auth_provider.dart';
 
 // Private navigator keys
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorHomeKey = GlobalKey<NavigatorState>(debugLabel: 'shellHome');
 final _shellNavigatorExploreKey = GlobalKey<NavigatorState>(debugLabel: 'shellExplore');
+final _shellNavigatorTeachKey = GlobalKey<NavigatorState>(debugLabel: 'shellTeach');
 final _shellNavigatorLearnKey = GlobalKey<NavigatorState>(debugLabel: 'shellLearn');
 final _shellNavigatorProfileKey = GlobalKey<NavigatorState>(debugLabel: 'shellProfile');
 
@@ -107,13 +115,24 @@ class AppRouter {
               ],
             ),
             
-            // Learning Branch (Progress)
+            // Teach Branch (Reverse Tutoring)
+            StatefulShellBranch(
+              navigatorKey: _shellNavigatorTeachKey,
+              routes: [
+                GoRoute(
+                  path: '/teach',
+                  builder: (context, state) => const TeachHomeScreen(),
+                ),
+              ],
+            ),
+            
+            // Progress Branch
             StatefulShellBranch(
               navigatorKey: _shellNavigatorLearnKey,
               routes: [
                 GoRoute(
-                  path: '/learning',
-                  builder: (context, state) => const Scaffold(body: Center(child: Text("My Learning (TODO)"))), // Reuse learning path list or screen
+                  path: '/progress',
+                  builder: (context, state) => const ProgressScreen(),
                 ),
               ],
             ),
@@ -177,12 +196,14 @@ class AppRouter {
           },
           routes: [
             GoRoute(
-              path: 'lesson/:lessonId',
+              path: 'module/:moduleId/lesson/:lessonId',
               builder: (context, state) {
                 final pathId = state.pathParameters['pathId']!;
+                final moduleId = state.pathParameters['moduleId']!;
                 final lessonId = state.pathParameters['lessonId']!;
                 return LessonScreen(
                   pathId: pathId,
+                  moduleId: int.parse(moduleId),
                   lessonId: int.parse(lessonId),
                 );
               },
@@ -202,7 +223,65 @@ class AppRouter {
             );
           },
         ),
+        
+        // Teach Session Route - with topic as query param (for custom topics)
+        GoRoute(
+          path: '/teach/session',
+          builder: (context, state) {
+            final topic = state.uri.queryParameters['topic'] ?? 
+                          state.extra as String? ?? 
+                          'General Topic';
+            return TeachSessionScreen(topic: topic);
+          },
+        ),
+        
+        // Teach Session Route - with topicId as path param (for pre-defined topics)
+        GoRoute(
+          path: '/teach/session/:topicId',
+          builder: (context, state) {
+            final topicId = state.pathParameters['topicId'] ?? 'general';
+            // Convert topicId to readable topic name
+            final topic = _formatTopicFromId(topicId);
+            return TeachSessionScreen(topic: topic);
+          },
+        ),
+
+        // Document Routes
+        GoRoute(
+          path: '/documents',
+          builder: (context, state) => const DocumentsScreen(),
+        ),
+        GoRoute(
+          path: '/documents/upload',
+          builder: (context, state) => const DocumentUploadScreen(),
+        ),
+        GoRoute(
+          path: '/documents/:docId',
+          builder: (context, state) {
+            final docId = state.pathParameters['docId']!;
+            return DocumentViewScreen(documentId: docId);
+          },
+        ),
+        GoRoute(
+          path: '/documents/:docId/chat',
+          builder: (context, state) {
+            final docId = state.pathParameters['docId']!;
+            return DocumentChatScreen(documentId: docId);
+          },
+        ),
       ],
     );
   });
+  
+  /// Helper to convert topic-id to readable Topic Name
+  static String _formatTopicFromId(String topicId) {
+    return topicId
+        .replaceAll('-', ' ')
+        .replaceAll('_', ' ')
+        .split(' ')
+        .map((word) => word.isNotEmpty 
+            ? '${word[0].toUpperCase()}${word.substring(1)}' 
+            : '')
+        .join(' ');
+  }
 }

@@ -135,6 +135,21 @@ class GroqService:
             json_response=json_response
         )
 
+    async def generate_response(
+        self,
+        prompt: str,
+        system_prompt: str = "You are a helpful assistant.",
+        temperature: float = 0.7
+    ) -> str:
+        """
+        Alias for generate_with_system_prompt for compatibility.
+        """
+        return await self.generate_with_system_prompt(
+            system_prompt=system_prompt,
+            user_message=prompt,
+            temperature=temperature
+        )
+
     def parse_json_response(self, response: str) -> Dict[str, Any]:
         """
         Extract and parse JSON from response. 

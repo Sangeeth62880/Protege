@@ -12,4 +12,4 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "Protege"
-include(":app")
+// include(":app") // Removing broken module

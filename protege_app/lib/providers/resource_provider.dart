@@ -45,6 +45,7 @@ class ResourceNotifier extends StateNotifier<ResourceState> {
       : super(const ResourceState());
 
   Future<void> loadResources({
+    required String topic,
     required Map<String, String> searchQueries,
     bool forceRefresh = false,
   }) async {
@@ -55,6 +56,7 @@ class ResourceNotifier extends StateNotifier<ResourceState> {
 
     try {
       final resources = await _apiService.curateResources(
+        topic: topic,
         lessonTitle: lessonTitle,
         searchQueries: searchQueries,
       );

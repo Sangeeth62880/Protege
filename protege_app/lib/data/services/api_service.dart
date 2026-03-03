@@ -41,6 +41,9 @@ class ApiService {
             AppLogger.error('Failed to get auth token', tag: 'ApiService', error: e);
           }
           
+          print('[API] Full URL: ${options.uri}');
+          print('[API] Request: ${options.method} ${options.path}');
+          print('[API] Data: ${options.data}');
           AppLogger.info('Request: ${options.method} ${options.path}', tag: 'ApiService');
           return handler.next(options);
         },
@@ -87,15 +90,27 @@ class ApiService {
     Map<String, dynamic>? queryParameters,
     Options? options,
   }) async {
+    print('[API POST] Starting post to: $path');
+    print('[API POST] Base URL: ${_dio.options.baseUrl}');
+    print('[API POST] Full URL: ${_dio.options.baseUrl}$path');
+    print('[API POST] Data: $data');
     try {
-      return await _dio.post<T>(
+      print('[API POST] Calling dio.post...');
+      final response = await _dio.post<T>(
         path,
         data: data,
         queryParameters: queryParameters,
         options: options,
       );
+      print('[API POST] Response received: ${response.statusCode}');
+      return response;
     } on DioException catch (e) {
+      print('[API POST] DioException: ${e.type} - ${e.message}');
+      print('[API POST] DioException response: ${e.response?.data}');
       throw _handleDioError(e);
+    } catch (e) {
+      print('[API POST] Unknown exception: $e');
+      rethrow;
     }
   }
   
@@ -138,28 +153,52 @@ class ApiService {
   }
   
   Exception _handleDioError(DioException e) {
+    // Log full error details
+    AppLogger.error(
+      'DioError: type=${e.type}, status=${e.response?.statusCode}, data=${e.response?.data}',
+      tag: 'ApiService',
+      error: e,
+    );
+    
     // Return user-friendly error messages based on status codes
     if (e.type == DioExceptionType.connectionTimeout || 
         e.type == DioExceptionType.receiveTimeout) {
       return Exception('Connection timed out. Please check your internet.');
     }
     
+    if (e.type == DioExceptionType.connectionError) {
+      return Exception('Connection error. Is the backend server running?');
+    }
+    
     if (e.response != null) {
       final statusCode = e.response!.statusCode;
+      final data = e.response!.data;
+      
       if (statusCode == 401) {
         return Exception('Unauthorized. Please sign in again.');
       } else if (statusCode == 403) {
         return Exception('Access denied.');
-      } if (statusCode == 404) {
+      } else if (statusCode == 404) {
         return Exception('Resource not found.');
+      } else if (statusCode == 422) {
+        // Validation error - extract detailed message
+        if (data is Map && data.containsKey('detail')) {
+          final detail = data['detail'];
+          if (detail is List && detail.isNotEmpty) {
+            // Pydantic validation errors are in list format
+            final errors = detail.map((e) => '${e['loc']?.join('.')}: ${e['msg']}').join(', ');
+            return Exception('Validation error: $errors');
+          }
+          return Exception('Validation error: $detail');
+        }
+        return Exception('Invalid request data.');
       } else if (statusCode! >= 500) {
         return Exception('Server error. Please try again later.');
       }
       
       // Try to extract server message
-      final data = e.response!.data;
       if (data is Map && data.containsKey('detail')) {
-        return Exception(data['detail']);
+        return Exception(data['detail'].toString());
       }
     }
     

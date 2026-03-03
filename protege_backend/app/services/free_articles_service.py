@@ -1,77 +1,76 @@
 """
-Free Articles Service
-Aggregates articles from multiple free sources as alternative to Google Custom Search.
+Free Articles Service - Rewritten for Accuracy
+Uses full-text search for Hashnode and freeCodeCamp instead of first-keyword tag matching.
 NO API KEY REQUIRED
 """
 import httpx
 import asyncio
 from typing import Optional
+import re
+
+# Stop words to skip when building search terms
+STOP_WORDS = frozenset({
+    "understanding", "introduction", "to", "the", "of", "in", "a", "an",
+    "and", "for", "with", "basic", "advanced", "learn", "building",
+    "creating", "using", "how", "what", "why", "is", "are", "this",
+})
+
 
 class FreeArticlesService:
     """
-    Aggregates articles from free sources:
-    - Dev.to (already have)
-    - Hashnode (free API)
-    - freeCodeCamp (RSS/web)
-    - Medium (limited, no API but can use RSS)
+    Aggregates articles from free sources using full-text search:
+    - Hashnode (GraphQL full-text search)
+    - freeCodeCamp (Ghost Content API with text filter)
     """
-    
+
     def __init__(self):
         print("[FREE_ARTICLES] Service initialized (no auth required)")
-    
+
     async def search_articles(
-        self,
-        query: str,
-        max_results: int = 5
+        self, query: str, max_results: int = 5
     ) -> list[dict]:
-        """
-        Search for articles across multiple free sources.
-        
-        Args:
-            query: Search query
-            max_results: Maximum results
-            
-        Returns:
-            List of article dictionaries from various sources
-        """
+        """Search for articles across multiple free sources."""
         print(f"[FREE_ARTICLES] Searching: {query}")
-        
-        # Run searches in parallel
+
         tasks = [
             self._search_hashnode(query, max_results=3),
             self._search_freecodecamp(query, max_results=3),
         ]
-        
+
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        
+
         articles = []
         for result in results:
             if isinstance(result, list):
                 articles.extend(result)
             elif isinstance(result, Exception):
                 print(f"[FREE_ARTICLES] A source failed: {result}")
-        
-        # Sort by some quality metric and limit
-        articles = sorted(articles, key=lambda x: x.get("reactions", 0), reverse=True)
-        
+
+        # Sort by reactions/quality and limit
+        articles = sorted(
+            articles, key=lambda x: x.get("reactions", 0), reverse=True
+        )
+
         print(f"[FREE_ARTICLES] Total found: {len(articles[:max_results])} articles")
         return articles[:max_results]
-    
-    async def _search_hashnode(self, query: str, max_results: int = 3) -> list[dict]:
+
+    async def _search_hashnode(
+        self, query: str, max_results: int = 3
+    ) -> list[dict]:
         """
-        Search Hashnode using their GraphQL API.
-        Free, no auth required for public posts.
+        Search Hashnode using their GraphQL API with FULL-TEXT search.
+        Uses searchPostsOfPublicHashnodeBlogs instead of tag-only taggedPosts.
         """
         print("[FREE_ARTICLES] Searching Hashnode...")
-        
+
         graphql_url = "https://gql.hashnode.com"
-        
-        # Extract first keyword for tag search
-        tag = query.lower().split()[0] if query else "programming"
-        
+
+        # Use full query for search, not just first keyword
         gql_query = """
-        query SearchPosts($tag: String!) {
-            taggedPosts(tag: $tag, first: 10) {
+        query SearchPosts($query: String!) {
+            searchPostsOfPublicHashnodeBlogs(
+                input: { query: $query, first: 10 }
+            ) {
                 edges {
                     node {
                         title
@@ -92,24 +91,33 @@ class FreeArticlesService:
             }
         }
         """
-        
+
         timeout = httpx.Timeout(30.0)
-        
+
         async with httpx.AsyncClient(timeout=timeout) as client:
             try:
                 response = await client.post(
                     graphql_url,
-                    json={"query": gql_query, "variables": {"tag": tag}},
-                    headers={"Content-Type": "application/json"}
+                    json={"query": gql_query, "variables": {"query": query}},
+                    headers={"Content-Type": "application/json"},
                 )
-                
+
                 if response.status_code != 200:
                     print(f"[HASHNODE] API error: {response.status_code}")
                     return []
-                
+
                 data = response.json()
-                edges = data.get("data", {}).get("taggedPosts", {}).get("edges", [])
-                
+
+                # Navigate the response structure
+                search_result = data.get("data", {}).get(
+                    "searchPostsOfPublicHashnodeBlogs", {}
+                )
+                edges = search_result.get("edges", [])
+
+                if not edges:
+                    print("[HASHNODE] No results from full-text search")
+                    return []
+
                 articles = []
                 for edge in edges[:max_results]:
                     node = edge.get("node", {})
@@ -120,89 +128,144 @@ class FreeArticlesService:
                         "source_domain": "hashnode.com",
                         "title": node.get("title", ""),
                         "url": node.get("url", ""),
-                        "description": node.get("brief", "")[:200],
+                        "description": (node.get("brief") or "")[:200],
                         "author": node.get("author", {}).get("name", "Unknown"),
-                        "author_avatar": node.get("author", {}).get("profilePicture", ""),
+                        "author_avatar": node.get("author", {}).get(
+                            "profilePicture", ""
+                        ),
                         "published_at": node.get("publishedAt", ""),
                         "read_time_minutes": node.get("readTimeInMinutes", 5),
                         "reactions": node.get("reactionCount", 0),
-                        "cover_image": node.get("coverImage", {}).get("url", "") if node.get("coverImage") else "",
+                        "cover_image": (
+                            node.get("coverImage", {}).get("url", "")
+                            if node.get("coverImage")
+                            else ""
+                        ),
                     }
                     articles.append(article)
-                
-                print(f"[HASHNODE] Found {len(articles)} articles")
+
+                print(f"[HASHNODE] Found {len(articles)} articles via full-text search")
                 return articles
-                
+
             except Exception as e:
                 print(f"[HASHNODE] Error: {e}")
                 return []
-    
-    async def _search_freecodecamp(self, query: str, max_results: int = 3) -> list[dict]:
+
+    async def _search_freecodecamp(
+        self, query: str, max_results: int = 3
+    ) -> list[dict]:
         """
         Get articles from freeCodeCamp news.
-        Uses their public API/RSS.
+        Uses Ghost Content API with text filter instead of tag-only.
         """
         print("[FREE_ARTICLES] Searching freeCodeCamp...")
-        
-        # freeCodeCamp has a simple search endpoint
-        search_url = f"https://www.freecodecamp.org/news/search/"
-        
-        # Alternative: Use their Ghost API
-        api_url = "https://www.freecodecamp.org/news/ghost/api/v3/content/posts/"
-        
+
+        api_url = (
+            "https://www.freecodecamp.org/news/ghost/api/v3/content/posts/"
+        )
+
+        # Extract meaningful keywords for filter
+        keywords = self._extract_keywords(query)
+        search_term = " ".join(keywords[:3]) if keywords else query
+
         timeout = httpx.Timeout(30.0)
-        
+
         async with httpx.AsyncClient(timeout=timeout) as client:
             try:
-                # Try getting recent posts filtered by tag
-                tag = query.lower().split()[0] if query else "programming"
-                
+                # Strategy 1: Use Ghost's title text filter
+                # Ghost supports filter operators: https://ghost.org/docs/content-api/
+                # ~'term' is a "contains" match
                 params = {
-                    "key": "bd680d3c04dd97c7a1459c29d5",  # Public Ghost content API key
-                    "limit": max_results,
-                    "filter": f"tag:{tag}",
-                    "include": "authors"
+                    "key": "bd680d3c04dd97c7a1459c29d5",
+                    "limit": max_results + 5,
+                    "include": "authors",
                 }
-                
+
+                # Try searching with the primary keyword in the title
+                if keywords:
+                    params["filter"] = f"title:~'{keywords[0]}'"
+
                 response = await client.get(api_url, params=params)
-                
-                if response.status_code != 200:
-                    # Try without tag filter
-                    params.pop("filter", None)
-                    response = await client.get(api_url, params=params)
-                
-                if response.status_code != 200:
-                    print(f"[FREECODECAMP] API error: {response.status_code}")
-                    return []
-                
-                data = response.json()
-                posts = data.get("posts", [])
-                
+
                 articles = []
-                for post in posts[:max_results]:
-                    authors = post.get("authors", [{}])
-                    first_author = authors[0] if authors else {}
-                    
-                    article = {
-                        "type": "article",
-                        "source": "freecodecamp",
-                        "source_name": "freeCodeCamp",
-                        "source_domain": "freecodecamp.org",
-                        "title": post.get("title", ""),
-                        "url": post.get("url", ""),
-                        "description": post.get("excerpt", "")[:200] if post.get("excerpt") else "",
-                        "author": first_author.get("name", "freeCodeCamp"),
-                        "author_avatar": first_author.get("profile_image", ""),
-                        "published_at": post.get("published_at", ""),
-                        "read_time_minutes": post.get("reading_time", 5),
-                        "reactions": 0,  # Not available
-                        "cover_image": post.get("feature_image", ""),
-                    }
-                    articles.append(article)
-                
+                if response.status_code == 200:
+                    data = response.json()
+                    posts = data.get("posts", [])
+
+                    if posts:
+                        articles = self._parse_fcc_posts(posts, max_results)
+
+                # Strategy 2: If we got nothing or too few, try second keyword
+                if len(articles) < 2 and len(keywords) >= 2:
+                    params["filter"] = f"title:~'{keywords[1]}'"
+                    response = await client.get(api_url, params=params)
+                    if response.status_code == 200:
+                        data = response.json()
+                        posts = data.get("posts", [])
+                        more = self._parse_fcc_posts(posts, max_results)
+                        # Add non-duplicate articles
+                        existing_urls = {a["url"] for a in articles}
+                        for a in more:
+                            if a["url"] not in existing_urls:
+                                articles.append(a)
+
+                # Strategy 3: If still nothing, try without filter but validate titles
+                if not articles:
+                    params.pop("filter", None)
+                    params["limit"] = 30  # Fetch more to filter
+                    response = await client.get(api_url, params=params)
+                    if response.status_code == 200:
+                        data = response.json()
+                        posts = data.get("posts", [])
+                        # Filter by title relevance
+                        relevant_posts = [
+                            p
+                            for p in posts
+                            if any(
+                                kw in (p.get("title") or "").lower()
+                                for kw in keywords
+                            )
+                        ]
+                        articles = self._parse_fcc_posts(
+                            relevant_posts, max_results
+                        )
+
                 print(f"[FREECODECAMP] Found {len(articles)} articles")
-                return articles
-                
+                return articles[:max_results]
+
             except Exception as e:
                 print(f"[FREECODECAMP] Error: {e}")
                 return []
+
+    def _parse_fcc_posts(
+        self, posts: list, max_results: int
+    ) -> list[dict]:
+        """Parse freeCodeCamp Ghost posts into standard format."""
+        articles = []
+        for post in posts[:max_results]:
+            authors = post.get("authors", [{}])
+            first_author = authors[0] if authors else {}
+
+            article = {
+                "type": "article",
+                "source": "freecodecamp",
+                "source_name": "freeCodeCamp",
+                "source_domain": "freecodecamp.org",
+                "title": post.get("title", ""),
+                "url": post.get("url", ""),
+                "description": (post.get("excerpt") or "")[:200],
+                "author": first_author.get("name", "freeCodeCamp"),
+                "author_avatar": first_author.get("profile_image", ""),
+                "published_at": post.get("published_at", ""),
+                "read_time_minutes": post.get("reading_time", 5),
+                "reactions": 0,  # Not available from Ghost API
+                "cover_image": post.get("feature_image", ""),
+            }
+            articles.append(article)
+        return articles
+
+    def _extract_keywords(self, query: str) -> list[str]:
+        """Extract meaningful keywords, skipping stop words."""
+        words = re.findall(r"[a-z0-9]+", query.lower())
+        meaningful = [w for w in words if w not in STOP_WORDS and len(w) >= 3]
+        return meaningful if meaningful else words[:2]

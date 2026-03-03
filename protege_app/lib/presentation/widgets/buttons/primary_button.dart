@@ -1,133 +1,141 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/theme/app_typography.dart';
 
-/// Primary button widget
-class PrimaryButton extends StatelessWidget {
+/// Primary action button with gradient, shadow, and press animation
+class PrimaryButton extends StatefulWidget {
   final String text;
   final VoidCallback? onPressed;
   final bool isLoading;
-  final Color? backgroundColor;
+  final bool isFullWidth;
   final IconData? icon;
-  final double? width;
-
+  final double? height;
+  
   const PrimaryButton({
     super.key,
     required this.text,
     this.onPressed,
     this.isLoading = false,
-    this.backgroundColor,
+    this.isFullWidth = true,
     this.icon,
-    this.width,
+    this.height,
   });
 
   @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: width ?? double.infinity,
-      height: 56,
-      child: ElevatedButton(
-        onPressed: isLoading ? null : onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: backgroundColor ?? AppColors.primary,
-          foregroundColor: Colors.white,
-          disabledBackgroundColor: (backgroundColor ?? AppColors.primary).withValues(alpha: 0.5),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          elevation: 0,
-        ),
-        child: isLoading
-            ? const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 2.5,
-                ),
-              )
-            : Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (icon != null) ...[
-                    Icon(icon, size: 20),
-                    const SizedBox(width: 8),
-                  ],
-                  Text(
-                    text,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-      ),
-    );
-  }
+  State<PrimaryButton> createState() => _PrimaryButtonState();
 }
 
-/// Secondary/outline button widget
-class SecondaryButton extends StatelessWidget {
-  final String text;
-  final VoidCallback? onPressed;
-  final bool isLoading;
-  final Color? borderColor;
-  final IconData? icon;
+class _PrimaryButtonState extends State<PrimaryButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+  
+  bool _isPressed = false;
 
-  const SecondaryButton({
-    super.key,
-    required this.text,
-    this.onPressed,
-    this.isLoading = false,
-    this.borderColor,
-    this.icon,
-  });
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 150),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onTapDown(TapDownDetails details) {
+    setState(() => _isPressed = true);
+    _controller.forward();
+  }
+
+  void _onTapUp(TapUpDetails details) {
+    setState(() => _isPressed = false);
+    _controller.reverse();
+  }
+
+  void _onTapCancel() {
+    setState(() => _isPressed = false);
+    _controller.reverse();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final color = borderColor ?? AppColors.primary;
-
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: OutlinedButton(
-        onPressed: isLoading ? null : onPressed,
-        style: OutlinedButton.styleFrom(
-          foregroundColor: color,
-          side: BorderSide(color: color, width: 2),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-        ),
-        child: isLoading
-            ? SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  color: color,
-                  strokeWidth: 2.5,
-                ),
-              )
-            : Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (icon != null) ...[
-                    Icon(icon, size: 20),
-                    const SizedBox(width: 8),
-                  ],
-                  Text(
-                    text,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: color,
-                    ),
-                  ),
-                ],
+    final isDisabled = widget.onPressed == null || widget.isLoading;
+    
+    return AnimatedBuilder(
+      animation: _scaleAnimation,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _scaleAnimation.value,
+          child: GestureDetector(
+            onTapDown: isDisabled ? null : _onTapDown,
+            onTapUp: isDisabled ? null : _onTapUp,
+            onTapCancel: isDisabled ? null : _onTapCancel,
+            onTap: isDisabled ? null : widget.onPressed,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              height: widget.height ?? 56,
+              width: widget.isFullWidth ? double.infinity : null,
+              padding: widget.isFullWidth
+                  ? null
+                  : const EdgeInsets.symmetric(horizontal: 32),
+              decoration: BoxDecoration(
+                gradient: isDisabled
+                    ? LinearGradient(
+                        colors: [Colors.grey.shade400, Colors.grey.shade500],
+                      )
+                    : AppColors.primaryGradient,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: isDisabled
+                    ? null
+                    : [
+                        BoxShadow(
+                          color: AppColors.primary.withAlpha(_isPressed ? 51 : 102),
+                          blurRadius: _isPressed ? 8 : 16,
+                          offset: Offset(0, _isPressed ? 2 : 6),
+                        ),
+                      ],
               ),
-      ),
+              child: Center(
+                child: widget.isLoading
+                    ? const SizedBox(
+                        height: 24,
+                        width: 24,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2.5,
+                        ),
+                      )
+                    : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if (widget.icon != null) ...[
+                            Icon(
+                              widget.icon,
+                              color: AppColors.textOnPrimary,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                          ],
+                          Text(
+                            widget.text,
+                            style: AppTypography.button,
+                          ),
+                        ],
+                      ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

@@ -43,10 +43,11 @@ class _SyllabusLoadingScreenState extends ConsumerState<SyllabusLoadingScreen> w
     super.dispose();
   }
 
-  Future<void> _startGeneration() async {
+    Future<void> _startGeneration() async {
     _updateStatus();
     
     try {
+      print('DEBUG_SYLLABUS: Starting generation for ${widget.topic}');
       final result = await ref.read(syllabusGeneratorProvider.notifier).generateSyllabus(
         topic: widget.topic,
         goal: widget.goal,
@@ -54,13 +55,20 @@ class _SyllabusLoadingScreenState extends ConsumerState<SyllabusLoadingScreen> w
         dailyMinutes: widget.duration,
       ).timeout(const Duration(seconds: 130)); 
 
-      if (!mounted) return;
+      print('DEBUG_SYLLABUS: Generation finished. Result: ${result != null ? "Success" : "Null"}');
+
+      if (!mounted) {
+         print('DEBUG_SYLLABUS: Widget unmounted after generation');
+         return;
+      }
 
       if (result != null) {
+        print('DEBUG_SYLLABUS: Navigating to preview');
         context.pushReplacement('/create-path/preview');
       } else {
         // Check provider state for error
         final state = ref.read(syllabusGeneratorProvider);
+        print('DEBUG_SYLLABUS: Result is null. Has Error: ${state.hasError}');
         if (state.hasError) {
           _handleError(message: state.error.toString());
         } else {
@@ -68,8 +76,19 @@ class _SyllabusLoadingScreenState extends ConsumerState<SyllabusLoadingScreen> w
         }
       }
     } catch (e) {
+      print('DEBUG_SYLLABUS: Exception catch block: $e');
       if (!mounted) return;
-      _handleError(message: 'Request timed out or failed: $e');
+      // Extract meaningful error message
+      String errorMessage = 'Something went wrong. Please try again.';
+      if (e.toString().contains('Connection refused') || e.toString().contains('SocketException')) {
+        errorMessage = 'Cannot connect to server. Please check your internet or if the server is running.';
+      } else if (e.toString().contains('503')) {
+        errorMessage = 'AI Service unavailable. Please try again later.';
+      } else if (e.toString().contains('timeout')) {
+         errorMessage = 'Request timed out. The AI is taking too long.';
+      }
+      
+      _handleError(message: errorMessage);
     }
   }
 

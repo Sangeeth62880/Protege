@@ -22,10 +22,10 @@ class SyllabusModel {
 
   factory SyllabusModel.fromJson(Map<String, dynamic> json) {
     return SyllabusModel(
-      topic: json['topic'] as String,
-      description: json['description'] as String,
-      totalDurationHours: (json['total_duration_hours'] as num).toDouble(),
-      difficulty: json['difficulty'] as String,
+      topic: json['topic']?.toString() ?? 'Untitled',
+      description: json['description']?.toString() ?? '',
+      totalDurationHours: (json['total_duration_hours'] as num?)?.toDouble() ?? 0.0,
+      difficulty: json['difficulty']?.toString() ?? 'beginner',
       prerequisites: List<String>.from(json['prerequisites'] ?? []),
       modules: (json['modules'] as List<dynamic>?)
               ?.map((e) => ModuleModel.fromJson(e as Map<String, dynamic>))
@@ -191,15 +191,15 @@ class ModuleModel {
 
   factory ModuleModel.fromJson(Map<String, dynamic> json) {
     return ModuleModel(
-      moduleNumber: json['module_number'] ?? json['moduleNumber'] as int,
-      title: json['title'] as String,
-      description: json['description'] as String,
-      durationHours: (json['duration_hours'] ?? json['durationHours'] as num).toDouble(),
+      moduleNumber: (json['module_number'] ?? json['moduleNumber'] ?? 0) as int,
+      title: json['title']?.toString() ?? 'Untitled Module',
+      description: json['description']?.toString() ?? '',
+      durationHours: (json['duration_hours'] ?? json['durationHours'] as num?)?.toDouble() ?? 0.0,
       lessons: (json['lessons'] as List<dynamic>?)
               ?.map((e) => LessonModel.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
-      isCompleted: json['is_completed'] ?? json['isCompleted'] ?? json['completed'] as bool? ?? false,
+      isCompleted: json['is_completed'] ?? json['isCompleted'] ?? json['completed'] ?? false,
     );
   }
 
@@ -213,6 +213,19 @@ class ModuleModel {
       'completed': isCompleted, // Backend expects 'completed'
     };
   }
+}
+
+/// Helper to parse search_queries with null-safe handling
+Map<String, String>? _parseSearchQueries(dynamic json) {
+  if (json == null) return null;
+  final map = json as Map<String, dynamic>;
+  final result = <String, String>{};
+  for (final entry in map.entries) {
+    if (entry.value != null) {
+      result[entry.key] = entry.value.toString();
+    }
+  }
+  return result.isEmpty ? null : result;
 }
 
 class LessonModel {
@@ -249,16 +262,14 @@ class LessonModel {
 
   factory LessonModel.fromJson(Map<String, dynamic> json) {
     return LessonModel(
-      lessonNumber: json['lesson_number'] ?? json['lessonNumber'] ?? json['order'] as int,
-      title: json['title'] as String,
-      description: json['description'] as String,
-      durationMinutes: json['duration_minutes'] ?? json['durationMinutes'] ?? 15,
+      lessonNumber: (json['lesson_number'] ?? json['lessonNumber'] ?? json['order'] ?? 0) as int,
+      title: json['title']?.toString() ?? 'Untitled Lesson',
+      description: json['description']?.toString() ?? '',
+      durationMinutes: (json['duration_minutes'] ?? json['durationMinutes'] ?? 15) as int,
       learningObjectives: List<String>.from(json['learning_objectives'] ?? []),
-      keyConcepts: List<String>.from(json['key_concepts'] ?? []), // Parse key_concepts
-      searchQueries: (json['search_queries'] as Map<String, dynamic>?)?.map(
-        (k, v) => MapEntry(k, v as String),
-      ),
-      isCompleted: json['is_completed'] ?? json['isCompleted'] ?? json['completed'] as bool? ?? false,
+      keyConcepts: List<String>.from(json['key_concepts'] ?? []),
+      searchQueries: _parseSearchQueries(json['search_queries']),
+      isCompleted: json['is_completed'] ?? json['isCompleted'] ?? json['completed'] ?? false,
       videoResourceIds: List<String>.from(json['video_resource_ids'] ?? []),
       articleResourceIds: List<String>.from(json['article_resource_ids'] ?? []),
     );

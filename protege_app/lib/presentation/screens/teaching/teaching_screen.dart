@@ -5,12 +5,18 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../providers/teaching_provider.dart';
 import '../../../data/models/teaching_session_model.dart';
+import '../../widgets/teaching/aha_meter_widget.dart';
 
 /// Teaching screen for reverse tutoring (Aha! Meter)
 class TeachingScreen extends ConsumerStatefulWidget {
   final String topicId;
+  final String? topic;
 
-  const TeachingScreen({super.key, required this.topicId});
+  const TeachingScreen({
+    super.key, 
+    required this.topicId, 
+    this.topic,
+  });
 
   @override
   ConsumerState<TeachingScreen> createState() => _TeachingScreenState();
@@ -26,7 +32,7 @@ class _TeachingScreenState extends ConsumerState<TeachingScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(teachingProvider.notifier).startSession(
             topicId: widget.topicId,
-            topic: 'Sample Topic', // TODO: Get from lesson
+            topic: widget.topic ?? 'General Topic',
           );
     });
   }
@@ -72,10 +78,10 @@ class _TeachingScreenState extends ConsumerState<TeachingScreen> {
           },
         ),
         actions: [
-          // Aha! Meter
+          // Aha! Meter (using new widget)
           Padding(
             padding: const EdgeInsets.only(right: 16),
-            child: _AhaMeter(score: teachingState.session?.ahaMeterScore ?? 0),
+            child: CompactAhaMeter(score: teachingState.session?.ahaMeterScore ?? 0),
           ),
         ],
       ),
@@ -88,14 +94,30 @@ class _TeachingScreenState extends ConsumerState<TeachingScreen> {
               color: AppColors.info.withValues(alpha: 0.1),
               child: Row(
                 children: [
-                  Icon(Icons.lightbulb_outline, color: AppColors.info),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      AppStrings.explainConcept,
-                      style: TextStyle(color: AppColors.info),
+                  // Persona avatar if available
+                  if (teachingState.session?.persona != null) ...[
+                    Text(
+                      teachingState.session!.persona!.avatarEmoji,
+                      style: const TextStyle(fontSize: 24),
                     ),
-                  ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Teaching ${teachingState.session!.persona!.name}',
+                        style: TextStyle(color: AppColors.info, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                  if (teachingState.session?.persona == null) ...[
+                    Icon(Icons.lightbulb_outline, color: AppColors.info),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        AppStrings.explainConcept,
+                        style: TextStyle(color: AppColors.info),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -144,10 +166,18 @@ class _TeachingScreenState extends ConsumerState<TeachingScreen> {
               color: AppColors.success.withValues(alpha: 0.1),
               child: Column(
                 children: [
-                  Icon(Icons.celebration, color: AppColors.success, size: 48),
-                  const SizedBox(height: 8),
+                  // Show Aha! meter with final score
+                  AhaMeterWidget(
+                    score: teachingState.session!.ahaMeterScore,
+                    breakdown: teachingState.session!.ahaBreakdown,
+                    showBreakdown: true,
+                    size: 100,
+                  ),
+                  const SizedBox(height: 16),
                   Text(
-                    AppStrings.greatExplanation,
+                    teachingState.session!.ahaMeterScore >= 85 
+                        ? '🎉 Mastery Achieved!' 
+                        : AppStrings.greatExplanation,
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                           color: AppColors.success,
                         ),
@@ -162,10 +192,14 @@ class _TeachingScreenState extends ConsumerState<TeachingScreen> {
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () {
-                      ref.read(teachingProvider.notifier).reset();
-                      context.pop();
+                      // Navigate to detailed results
+                      context.go('/teaching/results/${teachingState.session!.id}');
                     },
-                    child: const Text('Continue'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                    ),
+                    child: const Text('View Results', style: TextStyle(color: Colors.white)),
                   ),
                 ],
               ),

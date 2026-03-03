@@ -38,9 +38,15 @@ class MainShell extends StatelessWidget {
             label: 'Explore',
           ),
           BottomNavItem(
-            icon: Icons.school_outlined,
-            selectedIcon: Icons.school_rounded,
-            label: 'Learn',
+            icon: Icons.psychology_outlined,
+            selectedIcon: Icons.psychology_rounded,
+            label: 'Teach',
+            highlightColor: AppColors.teachMode,
+          ),
+          BottomNavItem(
+            icon: Icons.insights_outlined,
+            selectedIcon: Icons.insights_rounded,
+            label: 'Progress',
           ),
           BottomNavItem(
             icon: Icons.person_outline_rounded,

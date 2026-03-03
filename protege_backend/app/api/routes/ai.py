@@ -50,9 +50,14 @@ async def chat_with_tutor(
             suggestions=response.get("suggestions", []),
         )
     except Exception as e:
+        print(f"AI Chat failed: {e}")
+        context_hint = f" about {chat_request.context}" if chat_request.context else ""
         return ChatResponse(
-            response="I'm sorry, I couldn't process your request. Please try again.",
-            suggestions=["Try rephrasing your question", "Ask about a specific topic"],
+            response=f"I'm having trouble processing your question{context_hint}. Please try again in a moment.",
+            suggestions=[
+                f"Ask a simpler question{context_hint}",
+                "Check your internet connection and retry",
+            ],
         )
 
 

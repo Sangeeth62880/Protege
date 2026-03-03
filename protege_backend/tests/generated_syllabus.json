@@ -1,36 +1,35 @@
 {
   "topic": "Python for Data Science",
-  "description": "Build a strong foundation in Python programming and data science to analyze Kaggle datasets",
+  "description": "Learn the fundamentals of Python and data science to build a portfolio project analyzing Kaggle datasets",
   "total_duration_hours": 24.0,
   "difficulty": "beginner",
   "prerequisites": [
-    "Basic computer skills",
-    "Familiarity with data concepts"
+    "basic computer skills",
+    "high school math"
   ],
   "modules": [
     {
       "module_number": 1,
       "title": "Introduction to Python",
-      "description": "Learn the basics of Python programming",
+      "description": "Cover the basics of Python programming",
       "duration_hours": 4.0,
       "lessons": [
         {
           "lesson_number": 1,
-          "title": "Introduction to Python Basics",
-          "description": "Learn the syntax and data types of Python",
+          "title": "Setting Up Python and Basic Syntax",
+          "description": "Install Python, write first program, understand basic syntax",
           "duration_minutes": 45,
           "learning_objectives": [
-            "Understand Python syntax",
-            "Learn basic data types"
+            "install Python",
+            "write a simple Python program"
           ],
           "key_concepts": [
-            "Variables",
-            "Data types",
-            "Control structures"
+            "Python syntax",
+            "indentation"
           ],
           "search_queries": {
-            "youtube": "Python basics for beginners",
-            "articles": "Introduction to Python programming",
+            "youtube": "python installation and basic syntax",
+            "articles": "getting started with Python programming",
             "github": null
           },
           "completed": false,
@@ -39,21 +38,20 @@
         },
         {
           "lesson_number": 2,
-          "title": "Python Control Structures",
-          "description": "Learn about conditional statements and loops in Python",
+          "title": "Data Types and Operators",
+          "description": "Learn about data types and operators in Python",
           "duration_minutes": 45,
           "learning_objectives": [
-            "Understand if-else statements",
-            "Learn about for loops"
+            "understand data types",
+            "use operators"
           ],
           "key_concepts": [
-            "If-else statements",
-            "For loops",
-            "While loops"
+            "data types",
+            "operators"
           ],
           "search_queries": {
-            "youtube": "Python control structures tutorial",
-            "articles": "Python loops and conditional statements",
+            "youtube": "python data types and operators",
+            "articles": "python data types tutorial",
             "github": null
           },
           "completed": false,
@@ -62,21 +60,20 @@
         },
         {
           "lesson_number": 3,
-          "title": "Functions in Python",
-          "description": "Learn about functions and modules in Python",
+          "title": "Control Structures",
+          "description": "Learn about control structures in Python",
           "duration_minutes": 45,
           "learning_objectives": [
-            "Understand functions",
-            "Learn about modules"
+            "use if-else statements",
+            "use loops"
           ],
           "key_concepts": [
-            "Functions",
-            "Modules",
-            "Arguments"
+            "if-else statements",
+            "loops"
           ],
           "search_queries": {
-            "youtube": "Python functions tutorial",
-            "articles": "Introduction to Python modules",
+            "youtube": "python control structures",
+            "articles": "python control structures tutorial",
             "github": null
           },
           "completed": false,
@@ -88,27 +85,26 @@
     },
     {
       "module_number": 2,
-      "title": "Data Structures in Python",
-      "description": "Learn about lists, tuples, and dictionaries in Python",
+      "title": "Introduction to Data Science",
+      "description": "Cover the basics of data science and Kaggle datasets",
       "duration_hours": 4.0,
       "lessons": [
         {
           "lesson_number": 1,
-          "title": "Lists in Python",
-          "description": "Learn about lists and their operations",
+          "title": "Introduction to Data Science",
+          "description": "Learn what data science is and its applications",
           "duration_minutes": 45,
           "learning_objectives": [
-            "Understand lists",
-            "Learn about list operations"
+            "understand data science",
+            "learn about Kaggle"
           ],
           "key_concepts": [
-            "Lists",
-            "Indexing",
-            "Slicing"
+            "data science",
+            "Kaggle"
           ],
           "search_queries": {
-            "youtube": "Python lists tutorial",
-            "articles": "Introduction to Python lists",
+            "youtube": "what is data science",
+            "articles": "introduction to data science",
             "github": null
           },
           "completed": false,
@@ -117,21 +113,20 @@
         },
         {
           "lesson_number": 2,
-          "title": "Tuples and Dictionaries",
-          "description": "Learn about tuples and dictionaries in Python",
+          "title": "Kaggle Datasets and Competitions",
+          "description": "Explore Kaggle datasets and competitions",
           "duration_minutes": 45,
           "learning_objectives": [
-            "Understand tuples",
-            "Learn about dictionaries"
+            "explore Kaggle datasets",
+            "learn about competitions"
           ],
           "key_concepts": [
-            "Tuples",
-            "Dictionaries",
-            "Keys"
+            "Kaggle datasets",
+            "competitions"
           ],
           "search_queries": {
-            "youtube": "Python tuples and dictionaries tutorial",
-            "articles": "Introduction to Python tuples and dictionaries",
+            "youtube": "Kaggle datasets and competitions",
+            "articles": "Kaggle tutorial for beginners",
             "github": null
           },
           "completed": false,
@@ -140,21 +135,20 @@
         },
         {
           "lesson_number": 3,
-          "title": "Sets and Other Data Structures",
-          "description": "Learn about sets and other data structures in Python",
+          "title": "Data Preprocessing",
+          "description": "Learn how to preprocess data for analysis",
           "duration_minutes": 45,
           "learning_objectives": [
-            "Understand sets",
-            "Learn about other data structures"
+            "preprocess data",
+            "handle missing values"
           ],
           "key_concepts": [
-            "Sets",
-            "Frozensets",
-            "Other data structures"
+            "data preprocessing",
+            "missing values"
           ],
           "search_queries": {
-            "youtube": "Python sets tutorial",
-            "articles": "Introduction to Python sets and other data structures",
+            "youtube": "data preprocessing in python",
+            "articles": "data preprocessing tutorial",
             "github": null
           },
           "completed": false,
@@ -166,27 +160,145 @@
     },
     {
       "module_number": 3,
-      "title": "Data Analysis with Pandas",
-      "description": "Learn about data analysis using Pandas library",
+      "title": "Data Analysis with Python",
+      "description": "Learn how to analyze data using Python",
       "duration_hours": 6.0,
       "lessons": [
         {
           "lesson_number": 1,
           "title": "Introduction to Pandas",
-          "description": "Learn about the basics of Pandas library",
+          "description": "Learn how to use Pandas for data analysis",
           "duration_minutes": 45,
           "learning_objectives": [
-            "Understand Pandas basics",
-            "Learn about data frames"
+            "use Pandas for data analysis",
+            "learn about DataFrames"
           ],
           "key_concepts": [
             "Pandas",
-            "Data frames",
-            "Series"
+            "DataFrames"
           ],
           "search_queries": {
-            "youtube": "Pandas tutorial for beginners",
-            "articles": "Introduction to Pandas library",
+            "youtube": "python pandas tutorial",
+            "articles": "pandas tutorial for beginners",
+            "github": null
+          },
+          "completed": false,
+          "video_resource_ids": [],
+          "article_resource_ids": []
+        },
+        {
+          "lesson_number": 2,
+          "title": "Data Visualization with Matplotlib",
+          "description": "Learn how to visualize data using Matplotlib",
+          "duration_minutes": 45,
+          "learning_objectives": [
+            "use Matplotlib for data visualization",
+            "learn about plots"
+          ],
+          "key_concepts": [
+            "Matplotlib",
+            "plots"
+          ],
+          "search_queries": {
+            "youtube": "python matplotlib tutorial",
+            "articles": "matplotlib tutorial for beginners",
+            "github": null
+          },
+          "completed": false,
+          "video_resource_ids": [],
+          "article_resource_ids": []
+        },
+        {
+          "lesson_number": 3,
+          "title": "Machine Learning with Scikit-learn",
+          "description": "Learn how to use Scikit-learn for machine learning",
+          "duration_minutes": 45,
+          "learning_objectives": [
+            "use Scikit-learn for machine learning",
+            "learn about models"
+          ],
+          "key_concepts": [
+            "Scikit-learn",
+            "models"
+          ],
+          "search_queries": {
+            "youtube": "python scikit-learn tutorial",
+            "articles": "scikit-learn tutorial for beginners",
+            "github": null
+          },
+          "completed": false,
+          "video_resource_ids": [],
+          "article_resource_ids": []
+        }
+      ],
+      "completed": false
+    },
+    {
+      "module_number": 4,
+      "title": "Building a Portfolio Project",
+      "description": "Build a portfolio project analyzing a Kaggle dataset",
+      "duration_hours": 8.0,
+      "lessons": [
+        {
+          "lesson_number": 1,
+          "title": "Project Planning",
+          "description": "Plan a portfolio project",
+          "duration_minutes": 45,
+          "learning_objectives": [
+            "plan a project",
+            "choose a dataset"
+          ],
+          "key_concepts": [
+            "project planning",
+            "dataset selection"
+          ],
+          "search_queries": {
+            "youtube": "project planning for data science",
+            "articles": "how to plan a data science project",
+            "github": null
+          },
+          "completed": false,
+          "video_resource_ids": [],
+          "article_resource_ids": []
+        },
+        {
+          "lesson_number": 2,
+          "title": "Data Analysis and Modeling",
+          "description": "Analyze data and build models for the project",
+          "duration_minutes": 45,
+          "learning_objectives": [
+            "analyze data",
+            "build models"
+          ],
+          "key_concepts": [
+            "data analysis",
+            "modeling"
+          ],
+          "search_queries": {
+            "youtube": "data analysis and modeling in python",
+            "articles": "data analysis and modeling tutorial",
+            "github": null
+          },
+          "completed": false,
+          "video_resource_ids": [],
+          "article_resource_ids": []
+        },
+        {
+          "lesson_number": 3,
+          "title": "Project Presentation",
+          "description": "Present the portfolio project",
+          "duration_minutes": 45,
+          "learning_objectives": [
+            "present a project",
+            "communicate results"
+          ],
+          "key_concepts": [
+            "project presentation",
+            "communication"
+          ],
+          "search_queries": {
+            "youtube": "project presentation for data science",
+            "articles": "how to present a data science project",
             "github": null
           },
           "completed": false,
@@ -197,5 +309,16 @@
       "completed": false
     }
   ],
-  "capstone_project": null
+  "capstone_project": {
+    "title": "Analyzing a Kaggle Dataset",
+    "description": "Build a portfolio project analyzing a Kaggle dataset using Python and data science techniques",
+    "skills_applied": [
+      "Python programming",
+      "data analysis",
+      "machine learning",
+      "data visualization",
+      "project planning",
+      "communication"
+    ]
+  }
 }

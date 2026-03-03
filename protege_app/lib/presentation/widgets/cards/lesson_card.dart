@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../data/models/learning_path_model.dart';
 
-/// Lesson card widget
+/// Lesson card widget with consistent layout and accessible touch targets
 class LessonCard extends StatelessWidget {
   final LessonModel lesson;
   final int index;
@@ -22,34 +22,37 @@ class LessonCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: 0,
+      elevation: 2,
+      shadowColor: const Color(0x0F000000), // rgba(0,0,0,0.06) blur 8
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         side: BorderSide(
           color: lesson.isCompleted
               ? AppColors.success.withValues(alpha: 0.3)
-              : AppColors.textLight.withValues(alpha: 0.2),
+              : AppColors.borderLight,
+          width: 1,
         ),
       ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Lesson number
+                  // Index badge — 44×44 touch target
                   Container(
-                    width: 40,
-                    height: 40,
+                    width: 44,
+                    height: 44,
                     decoration: BoxDecoration(
                       color: lesson.isCompleted
                           ? AppColors.success
                           : AppColors.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Center(
                       child: lesson.isCompleted
@@ -58,14 +61,14 @@ class LessonCard extends StatelessWidget {
                               '$index',
                               style: TextStyle(
                                 color: AppColors.primary,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w700,
                                 fontSize: 16,
                               ),
                             ),
                     ),
                   ),
                   const SizedBox(width: 16),
-                  // Lesson info
+                  // Title + description — takes remaining width
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -73,28 +76,42 @@ class LessonCard extends StatelessWidget {
                         Text(
                           lesson.title,
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
                                 decoration: lesson.isCompleted
                                     ? TextDecoration.lineThrough
                                     : null,
                               ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 4),
                         Text(
                           lesson.description,
-                          style: Theme.of(context).textTheme.bodySmall,
-                          maxLines: 2,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                fontSize: 14,
+                                color: AppColors.textSecondary,
+                              ),
+                          maxLines: 3,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
                   ),
-                  const Icon(Icons.chevron_right),
+                  const SizedBox(width: 8),
+                  // Chevron — trailing aligned
+                  const Padding(
+                    padding: EdgeInsets.only(top: 10),
+                    child: Icon(Icons.chevron_right, size: 24, color: AppColors.textTertiary),
+                  ),
                 ],
               ),
               // Action buttons
               if (lesson.isCompleted || onQuizTap != null || onTeachTap != null) ...[
                 const SizedBox(height: 12),
-                Row(
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
                   children: [
                     if (lesson.videoResourceIds.isNotEmpty || lesson.articleResourceIds.isNotEmpty)
                       _ActionChip(
@@ -102,7 +119,6 @@ class LessonCard extends StatelessWidget {
                         label: '${lesson.videoResourceIds.length + lesson.articleResourceIds.length} resources',
                         onTap: onTap,
                       ),
-                    const SizedBox(width: 8),
                     if (onQuizTap != null)
                       _ActionChip(
                         icon: Icons.quiz_outlined,
@@ -110,7 +126,6 @@ class LessonCard extends StatelessWidget {
                         onTap: onQuizTap!,
                         color: AppColors.info,
                       ),
-                    const SizedBox(width: 8),
                     if (onTeachTap != null)
                       _ActionChip(
                         icon: Icons.psychology_outlined,
@@ -146,29 +161,33 @@ class _ActionChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final chipColor = color ?? AppColors.textSecondary;
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: chipColor.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 14, color: chipColor),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                color: chipColor,
-                fontWeight: FontWeight.w500,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 44),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: chipColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 16, color: chipColor),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: chipColor,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

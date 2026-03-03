@@ -19,6 +19,14 @@ class UserModel {
   final int totalXp;
   final int currentStreak;
 
+  // Aggregated stats
+  final int lessonsCompleted;
+  final int totalLearningMinutes;
+  final int teachSessions;
+  final int quizzesPassed;
+  final List<Map<String, dynamic>> badges;
+  final DateTime? lastActivityAt;
+
   const UserModel({
     required this.id,
     required this.email,
@@ -33,6 +41,12 @@ class UserModel {
     this.dailyTimeMinutes = 30,
     this.totalXp = 0,
     this.currentStreak = 0,
+    this.lessonsCompleted = 0,
+    this.totalLearningMinutes = 0,
+    this.teachSessions = 0,
+    this.quizzesPassed = 0,
+    this.badges = const [],
+    this.lastActivityAt,
   });
 
   /// Create from Firebase Auth User
@@ -70,6 +84,18 @@ class UserModel {
       dailyTimeMinutes: json['dailyTimeMinutes'] as int? ?? 30,
       totalXp: json['totalXp'] as int? ?? 0,
       currentStreak: json['currentStreak'] as int? ?? 0,
+      lessonsCompleted: json['lessonsCompleted'] as int? ?? 0,
+      totalLearningMinutes: json['totalLearningMinutes'] as int? ?? 0,
+      teachSessions: json['teachSessions'] as int? ?? 0,
+      quizzesPassed: json['quizzesPassed'] as int? ?? 0,
+      badges: (json['badges'] as List<dynamic>?)
+          ?.map((b) => Map<String, dynamic>.from(b as Map))
+          .toList() ?? [],
+      lastActivityAt: json['lastActivityAt'] != null
+          ? (json['lastActivityAt'] is Timestamp
+              ? (json['lastActivityAt'] as Timestamp).toDate()
+              : DateTime.parse(json['lastActivityAt'] as String))
+          : null,
     );
   }
 
@@ -88,6 +114,12 @@ class UserModel {
       'dailyTimeMinutes': dailyTimeMinutes,
       'totalXp': totalXp,
       'currentStreak': currentStreak,
+      'lessonsCompleted': lessonsCompleted,
+      'totalLearningMinutes': totalLearningMinutes,
+      'teachSessions': teachSessions,
+      'quizzesPassed': quizzesPassed,
+      'badges': badges,
+      'lastActivityAt': lastActivityAt != null ? Timestamp.fromDate(lastActivityAt!) : null,
     };
   }
 
@@ -105,6 +137,12 @@ class UserModel {
     int? dailyTimeMinutes,
     int? totalXp,
     int? currentStreak,
+    int? lessonsCompleted,
+    int? totalLearningMinutes,
+    int? teachSessions,
+    int? quizzesPassed,
+    List<Map<String, dynamic>>? badges,
+    DateTime? lastActivityAt,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -120,6 +158,12 @@ class UserModel {
       dailyTimeMinutes: dailyTimeMinutes ?? this.dailyTimeMinutes,
       totalXp: totalXp ?? this.totalXp,
       currentStreak: currentStreak ?? this.currentStreak,
+      lessonsCompleted: lessonsCompleted ?? this.lessonsCompleted,
+      totalLearningMinutes: totalLearningMinutes ?? this.totalLearningMinutes,
+      teachSessions: teachSessions ?? this.teachSessions,
+      quizzesPassed: quizzesPassed ?? this.quizzesPassed,
+      badges: badges ?? this.badges,
+      lastActivityAt: lastActivityAt ?? this.lastActivityAt,
     );
   }
 }

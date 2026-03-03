@@ -7,6 +7,7 @@ class ResourceApiService {
   ResourceApiService(this._apiService);
 
   Future<LessonResources> curateResources({
+    required String topic,
     required String lessonTitle,
     required Map<String, String> searchQueries,
   }) async {
@@ -14,6 +15,7 @@ class ResourceApiService {
       final response = await _apiService.post(
         '/api/v1/resources/curate',
         data: {
+          'topic': topic,
           'lesson_title': lessonTitle,
           'search_queries': searchQueries,
           'max_videos': 3,
@@ -34,6 +36,7 @@ class ResourceApiService {
 
   // Development endpoint to test without auth if needed
   Future<LessonResources> curateResourcesTest({
+    required String topic,
     required String lessonTitle,
     required Map<String, String> searchQueries,
   }) async {
@@ -41,6 +44,7 @@ class ResourceApiService {
       final response = await _apiService.post(
         '/api/v1/resources/curate-test',
         data: {
+          'topic': topic,
           'lesson_title': lessonTitle,
           'search_queries': searchQueries,
         },

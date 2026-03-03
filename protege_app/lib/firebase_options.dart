@@ -54,14 +54,14 @@ class DefaultFirebaseOptions {
     iosBundleId: 'com.protege.app',
   );
 
-  // TODO: Add web configuration from Firebase Console if needed
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'YOUR_WEB_API_KEY',
-    appId: 'YOUR_WEB_APP_ID',
+    apiKey: 'AIzaSyB08fakg2tN83H_5ZO299axcIYHdki-mj0',
+    appId: '1:584128862801:web:2f6acf27873f6a61d5f670',
     messagingSenderId: '584128862801',
     projectId: 'protege-f0256',
     storageBucket: 'protege-f0256.firebasestorage.app',
     authDomain: 'protege-f0256.firebaseapp.com',
+    measurementId: 'G-EDKG9J5P95',
   );
 
   // TODO: Add macOS configuration from Firebase Console if needed

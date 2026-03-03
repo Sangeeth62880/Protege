@@ -30,7 +30,7 @@ class YouTubeService:
         self,
         query: str,
         max_results: int = 5,
-        duration: str = "medium",  # short (<4min), medium (4-20min), long (>20min)
+        duration: str = None,  # None = all durations; short (<4min), medium (4-20min), long (>20min)
         order: str = "relevance",  # relevance, viewCount, date
         published_after_days: int = 730  # Last 2 years
     ) -> list[dict]:
@@ -59,11 +59,15 @@ class YouTubeService:
             "type": "video",
             "maxResults": min(max_results, 50),
             "order": order,
-            "videoDuration": duration,
             "publishedAfter": published_after,
             "relevanceLanguage": "en",
-            "safeSearch": "strict"
+            "safeSearch": "strict",
+            "videoCategoryId": "27",  # Education category
         }
+        
+        # Only add duration filter if explicitly specified
+        if duration:
+            params["videoDuration"] = duration
         
         timeout = httpx.Timeout(30.0)
         

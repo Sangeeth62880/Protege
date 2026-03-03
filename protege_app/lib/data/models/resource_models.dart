@@ -1,5 +1,5 @@
 /// Resource Types
-enum ResourceType { video, article, repository, wikipedia, unknown }
+enum ResourceType { video, article, repository, wikipedia, book, qa, course, documentation, unknown }
 
 /// Base Resource Model
 abstract class LearningResource {
@@ -153,6 +153,109 @@ class WikipediaResource extends LearningResource {
   }
 }
 
+/// Book Resource (Open Library)
+class BookResource extends LearningResource {
+  final String author;
+  final int? year;
+  final String? coverImage;
+
+  const BookResource({
+    required super.title,
+    required super.description,
+    required super.url,
+    required this.author,
+    this.year,
+    this.coverImage,
+    super.qualityScore,
+  }) : super(type: ResourceType.book);
+
+  factory BookResource.fromJson(Map<String, dynamic> json) {
+    return BookResource(
+      title: json['title'] ?? '',
+      description: json['description'] ?? '',
+      url: json['url'] ?? '',
+      author: json['author'] ?? 'Unknown',
+      year: json['year'],
+      coverImage: json['cover_image'],
+      qualityScore: (json['relevance_score'] as num?)?.toDouble() ?? 0.0,
+    );
+  }
+}
+
+/// Q&A Resource (Stack Overflow)
+class QAResource extends LearningResource {
+  final int score;
+  final int answerCount;
+  final List<String> tags;
+
+  const QAResource({
+    required super.title,
+    required super.description,
+    required super.url,
+    required this.score,
+    required this.answerCount,
+    this.tags = const [],
+    super.qualityScore,
+  }) : super(type: ResourceType.qa);
+
+  factory QAResource.fromJson(Map<String, dynamic> json) {
+    return QAResource(
+      title: json['title'] ?? '',
+      description: json['description'] ?? '',
+      url: json['url'] ?? '',
+      score: json['score'] ?? 0,
+      answerCount: json['answer_count'] ?? 0,
+      tags: List<String>.from(json['tags'] ?? []),
+      qualityScore: (json['relevance_score'] as num?)?.toDouble() ?? 0.0,
+    );
+  }
+}
+
+/// Course Resource (Coursera)
+class CourseResource extends LearningResource {
+  final String? coverImage;
+  final String? workload;
+
+  const CourseResource({
+    required super.title,
+    required super.description,
+    required super.url,
+    this.coverImage,
+    this.workload,
+    super.qualityScore,
+  }) : super(type: ResourceType.course);
+
+  factory CourseResource.fromJson(Map<String, dynamic> json) {
+    return CourseResource(
+      title: json['title'] ?? '',
+      description: json['description'] ?? '',
+      url: json['url'] ?? '',
+      coverImage: json['cover_image'],
+      workload: json['workload'],
+      qualityScore: (json['relevance_score'] as num?)?.toDouble() ?? 0.0,
+    );
+  }
+}
+
+/// Documentation Resource (MDN)
+class DocResource extends LearningResource {
+  const DocResource({
+    required super.title,
+    required super.description,
+    required super.url,
+    super.qualityScore,
+  }) : super(type: ResourceType.documentation);
+
+  factory DocResource.fromJson(Map<String, dynamic> json) {
+    return DocResource(
+      title: json['title'] ?? '',
+      description: json['description'] ?? '',
+      url: json['url'] ?? '',
+      qualityScore: (json['relevance_score'] as num?)?.toDouble() ?? 0.0,
+    );
+  }
+}
+
 /// Curated Lesson Resources Container
 class LessonResources {
   final String lessonTitle;
@@ -160,6 +263,10 @@ class LessonResources {
   final List<ArticleResource> articles;
   final List<GithubResource> repositories;
   final WikipediaResource? wikipedia;
+  final List<BookResource> books;
+  final List<QAResource> questions;
+  final List<CourseResource> courses;
+  final List<DocResource> docs;
   final int totalCount;
 
   const LessonResources({
@@ -168,11 +275,15 @@ class LessonResources {
     this.articles = const [],
     this.repositories = const [],
     this.wikipedia,
+    this.books = const [],
+    this.questions = const [],
+    this.courses = const [],
+    this.docs = const [],
     this.totalCount = 0,
   });
 
   factory LessonResources.fromJson(Map<String, dynamic> json) {
-    print('Parsing LessonResources: $json'); 
+    print('Parsing LessonResources: $json');
     return LessonResources(
       lessonTitle: json['lesson_title'] ?? '',
       videos: (json['videos'] as List?)
@@ -190,7 +301,24 @@ class LessonResources {
       wikipedia: json['wikipedia'] != null
           ? WikipediaResource.fromJson(json['wikipedia'])
           : null,
+      books: (json['books'] as List?)
+              ?.map((e) => BookResource.fromJson(e))
+              .toList() ??
+          [],
+      questions: (json['questions'] as List?)
+              ?.map((e) => QAResource.fromJson(e))
+              .toList() ??
+          [],
+      courses: (json['courses'] as List?)
+              ?.map((e) => CourseResource.fromJson(e))
+              .toList() ??
+          [],
+      docs: (json['docs'] as List?)
+              ?.map((e) => DocResource.fromJson(e))
+              .toList() ??
+          [],
       totalCount: json['total_resources'] ?? 0,
     );
   }
 }
+

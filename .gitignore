@@ -21,3 +21,18 @@ protege_app/.pub/
 protege_app/.packages
 protege_app/.flutter-plugins
 protege_app/.flutter-plugins-dependencies
+
+# JDK
+jdk-21/
+
+# Gradle
+.gradle/
+
+# VSCode
+.vscode/
+
+# ChromaDB data
+protege_backend/chroma_data/
+
+# Uploads
+protege_backend/uploads/

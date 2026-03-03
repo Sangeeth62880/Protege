@@ -6,18 +6,21 @@ import '../models/user_model.dart';
 import 'auth_repository.dart';
 
 /// A Mock implementation of AuthRepository for development/demo purposes
-/// when real Firebase configuration is missing.
+/// when real Firebase configuration is missing (e.g., running on web/Chrome).
 class MockAuthRepository implements AuthRepository {
-  final _controller = StreamController<User?>.broadcast();
   UserModel? _currentUser;
   bool _isLoggedIn = false;
 
-  MockAuthRepository() {
-    _controller.add(null);
-  }
+  MockAuthRepository();
 
   @override
-  Stream<User?> get authStateChanges => _controller.stream;
+  Stream<User?> get authStateChanges {
+    // Return a single-event stream that immediately emits null (not logged in).
+    // StreamProvider will pick up this value and transition from loading → data.
+    // When login/signup occurs, the stream-based auth isn't used for mock —
+    // AuthNotifier._init() handles state updates via signIn/signUp methods.
+    return Stream<User?>.value(null);
+  }
 
   @override
   User? get currentUser => null; 
@@ -56,7 +59,6 @@ class MockAuthRepository implements AuthRepository {
     await Future.delayed(const Duration(milliseconds: 500));
     _currentUser = null;
     _isLoggedIn = false;
-    _controller.add(null);
     return Result.success(null);
   }
 

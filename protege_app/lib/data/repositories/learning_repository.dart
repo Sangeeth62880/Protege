@@ -1,7 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/firebase_service.dart';
 import '../services/api_service.dart';
 import '../models/learning_path_model.dart';
 import '../models/resource_model.dart';
+import '../models/dashboard_models.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/utils/logger.dart';
 
@@ -24,6 +26,9 @@ class LearningRepository {
     required int duration,
   }) async {
     try {
+      print('DEBUG_SYLLABUS: [Repo] Sending request to /api/v1/learning/generate-syllabus-test');
+      print('DEBUG_SYLLABUS: [Repo] Data: topic=$topic, goal=$goal, level=$difficulty');
+      
       final response = await _apiService.post<Map<String, dynamic>>(
         '/api/v1/learning/generate-syllabus-test', // TEMPORARY DEBUG: Bypass Auth
         data: {
@@ -34,8 +39,11 @@ class LearningRepository {
         },
       );
       
+      print('DEBUG_SYLLABUS: [Repo] Response status: ${response.statusCode}');
+      
       return SyllabusModel.fromJson(response.data!);
     } catch (e) {
+      print('DEBUG_SYLLABUS: [Repo] Error: $e');
       AppLogger.error('Failed to generate syllabus', tag: 'LearningRepo', error: e);
       rethrow;
     }
@@ -58,7 +66,7 @@ class LearningRepository {
       };
 
       final response = await _apiService.post<Map<String, dynamic>>(
-         ApiConstants.savePath, 
+         ApiConstants.savePathTest, // TEMPORARY DEBUG: Bypass Auth
          data: data,
       );
       
@@ -154,6 +162,32 @@ class LearningRepository {
     }
   }
 
+   /// Mark a lesson as complete
+  Future<Map<String, dynamic>> completeLessonViaApi({
+    required String pathId,
+    required int moduleNumber,
+    required int lessonNumber,
+    required String userId,
+  }) async {
+    try {
+      final response = await _apiService.post(
+        '${ApiConstants.baseUrl}${ApiConstants.completeLesson}',
+        data: {
+          'path_id': pathId,
+          'module_number': moduleNumber,
+          'lesson_number': lessonNumber,
+          'user_id': userId,
+        },
+      );
+      return Map<String, dynamic>.from(response.data as Map);
+    } catch (e) {
+      AppLogger.error('Failed to complete lesson via API', tag: 'LearningRepo', error: e);
+      // Fallback to client-side completion
+      await completeLesson(pathId, lessonNumber, moduleNumber);
+      return {'status': 'completed_locally'};
+    }
+  }
+
   /// Mark a lesson as complete
   Future<void> completeLesson(String pathId, int lessonNumber, int moduleNumber) async {
     // Note: With Nested Modules, finding the lesson is harder.
@@ -203,6 +237,40 @@ class LearningRepository {
     }
   }
 
+  /// Generate AI lesson content via backend
+  Future<Map<String, dynamic>> generateLessonContent({
+    required String topic,
+    required String moduleTitle,
+    required String lessonTitle,
+    String lessonDescription = '',
+    List<String> keyConcepts = const [],
+    String difficulty = 'beginner',
+    String pathId = '',
+    int moduleNumber = 0,
+    int lessonNumber = 0,
+  }) async {
+    try {
+      final response = await _apiService.post(
+        '${ApiConstants.baseUrl}${ApiConstants.lessonContent}',
+        data: {
+          'topic': topic,
+          'module_title': moduleTitle,
+          'lesson_title': lessonTitle,
+          'lesson_description': lessonDescription,
+          'key_concepts': keyConcepts,
+          'difficulty': difficulty,
+          'path_id': pathId,
+          'module_number': moduleNumber,
+          'lesson_number': lessonNumber,
+        },
+      );
+      return Map<String, dynamic>.from(response.data as Map);
+    } catch (e) {
+      AppLogger.error('Failed to generate lesson content', tag: 'LearningRepo', error: e);
+      rethrow;
+    }
+  }
+
   /// Search resources from API
   Future<List<ResourceModel>> searchResources({
     required String query,
@@ -235,5 +303,167 @@ class LearningRepository {
         .map((snapshot) => snapshot.docs
             .map((doc) => LearningPathModel.fromJson(doc.data()))
             .toList());
+  }
+
+  // ============ DASHBOARD DATA ============
+
+  /// Log an activity event to the user's activity subcollection
+  Future<void> logActivity(String userId, ActivityEvent event) async {
+    try {
+      await _firebaseService.collection('user_activity')
+          .doc(userId)
+          .collection('events')
+          .add(event.toJson());
+    } catch (e) {
+      AppLogger.error('Failed to log activity', tag: 'LearningRepo', error: e);
+      // Non-critical: don't rethrow
+    }
+  }
+
+  /// Get recent activity events for the Home feed
+  Future<List<ActivityEvent>> getRecentActivity(String userId, {int limit = 10}) async {
+    try {
+      final snapshot = await _firebaseService.collection('user_activity')
+          .doc(userId)
+          .collection('events')
+          .orderBy('timestamp', descending: true)
+          .limit(limit)
+          .get();
+
+      return snapshot.docs
+          .map((doc) => ActivityEvent.fromJson(doc.data(), doc.id))
+          .toList();
+    } catch (e) {
+      AppLogger.error('Failed to get recent activity', tag: 'LearningRepo', error: e);
+      return [];
+    }
+  }
+
+  /// Get in-progress learning paths for "Continue Learning" section
+  Future<List<ContinueLearningItem>> getContinueLearningPaths(String userId, {int limit = 3}) async {
+    try {
+      final paths = await getUserLearningPaths(userId);
+
+      // Filter to in-progress paths (started but not complete)
+      final inProgress = paths.where((p) => p.progress > 0 && p.progress < 1.0).toList();
+
+      // Sort by most-recently-updated first
+      inProgress.sort((a, b) {
+        final aTime = a.updatedAt ?? a.createdAt;
+        final bTime = b.updatedAt ?? b.createdAt;
+        return bTime.compareTo(aTime);
+      });
+
+      final results = <ContinueLearningItem>[];
+      for (final path in inProgress.take(limit)) {
+        final allLessons = path.lessons;
+        final completedCount = allLessons.where((l) => l.isCompleted).length;
+        final nextLesson = allLessons.where((l) => !l.isCompleted).firstOrNull;
+
+        results.add(ContinueLearningItem(
+          pathId: path.id,
+          title: path.topic,
+          difficulty: path.difficulty,
+          nextLessonTitle: nextLesson?.title,
+          nextLessonIndex: nextLesson?.lessonNumber ?? 0,
+          percentComplete: path.progress,
+          lastActivityAt: path.updatedAt,
+          totalLessons: allLessons.length,
+          completedLessons: completedCount,
+        ));
+      }
+
+      // If no in-progress, show newest not-started paths
+      if (results.isEmpty) {
+        final notStarted = paths.where((p) => p.progress == 0).take(limit).toList();
+        for (final path in notStarted) {
+          results.add(ContinueLearningItem(
+            pathId: path.id,
+            title: path.topic,
+            difficulty: path.difficulty,
+            nextLessonTitle: path.lessons.isNotEmpty ? path.lessons.first.title : null,
+            nextLessonIndex: 1,
+            percentComplete: 0,
+            lastActivityAt: path.createdAt,
+            totalLessons: path.lessons.length,
+            completedLessons: 0,
+          ));
+        }
+      }
+
+      return results;
+    } catch (e) {
+      AppLogger.error('Failed to get continue learning', tag: 'LearningRepo', error: e);
+      return [];
+    }
+  }
+
+  /// Get all path progress summaries for the Progress screen
+  Future<List<PathProgressSummary>> getPathProgressSummaries(String userId) async {
+    try {
+      final paths = await getUserLearningPaths(userId);
+      return paths.map((path) {
+        final allLessons = path.lessons;
+        final completedCount = allLessons.where((l) => l.isCompleted).length;
+        return PathProgressSummary(
+          pathId: path.id,
+          title: path.topic,
+          percentComplete: path.progress,
+          lessonsCompleted: completedCount,
+          totalLessons: allLessons.length,
+          lastActivityAt: path.updatedAt,
+        );
+      }).toList();
+    } catch (e) {
+      AppLogger.error('Failed to get path summaries', tag: 'LearningRepo', error: e);
+      return [];
+    }
+  }
+
+  /// Get activity events for the current week (for weekly chart)
+  Future<List<ActivityEvent>> getWeeklyActivityEvents(String userId) async {
+    try {
+      final now = DateTime.now();
+      // Start of this week (Monday)
+      final weekStart = now.subtract(Duration(days: now.weekday - 1));
+      final weekStartDate = DateTime(weekStart.year, weekStart.month, weekStart.day);
+
+      final snapshot = await _firebaseService.collection('user_activity')
+          .doc(userId)
+          .collection('events')
+          .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(weekStartDate))
+          .orderBy('timestamp', descending: false)
+          .get();
+
+      return snapshot.docs
+          .map((doc) => ActivityEvent.fromJson(doc.data(), doc.id))
+          .toList();
+    } catch (e) {
+      AppLogger.error('Failed to get weekly activity', tag: 'LearningRepo', error: e);
+      return [];
+    }
+  }
+
+  /// Get activity events for a specific month (for calendar heatmap)
+  Future<List<ActivityEvent>> getMonthlyActivityEvents(String userId, int year, int month) async {
+    try {
+      final monthStart = DateTime(year, month, 1);
+      final monthEnd = DateTime(year, month + 1, 0, 23, 59, 59);
+
+      final snapshot = await _firebaseService.collection('user_activity')
+          .doc(userId)
+          .collection('events')
+          .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(monthStart))
+          .where('timestamp', isLessThanOrEqualTo: Timestamp.fromDate(monthEnd))
+          .orderBy('timestamp', descending: false)
+          .get();
+
+      return snapshot.docs
+          .map((doc) => ActivityEvent.fromJson(doc.data(), doc.id))
+          .toList();
+    } catch (e) {
+      AppLogger.error('Failed to get monthly activity', tag: 'LearningRepo', error: e);
+      return [];
+    }
   }
 }
