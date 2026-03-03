@@ -1,71 +1,49 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/theme/app_typography.dart';
+import '../../../core/constants/app_spacing.dart';
+import '../../../core/constants/app_animations.dart';
 
-/// Animated progress bar with gradient
+/// Smoothly animating progress bar with green fill on light track.
 class AnimatedProgressBar extends StatelessWidget {
   final double progress; // 0.0 to 1.0
   final double height;
-  final Color? backgroundColor;
-  final Gradient? gradient;
-  final bool showPercentage;
-  
+  final Color fillColor;
+  final Color trackColor;
+
   const AnimatedProgressBar({
     super.key,
     required this.progress,
     this.height = 8,
-    this.backgroundColor,
-    this.gradient,
-    this.showPercentage = false,
+    this.fillColor = AppColors.green,
+    this.trackColor = AppColors.borderLight,
   });
 
   @override
   Widget build(BuildContext context) {
-    final clampedProgress = progress.clamp(0.0, 1.0);
-    
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        if (showPercentage) ...[
-          Text(
-            '${(clampedProgress * 100).toInt()}%',
-            style: AppTypography.labelSmall.copyWith(
-              fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 4),
-        ],
-        Container(
-          height: height,
-          decoration: BoxDecoration(
-            color: backgroundColor ?? AppColors.surfaceVariant,
-            borderRadius: BorderRadius.circular(height / 2),
-          ),
-          child: Stack(
+    return Container(
+      height: height,
+      decoration: BoxDecoration(
+        color: trackColor,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return Stack(
             children: [
-              AnimatedFractionallySizedBox(
-                duration: const Duration(milliseconds: 500),
-                curve: Curves.easeOutCubic,
-                widthFactor: clampedProgress,
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: gradient ?? AppColors.primaryGradient,
-                    borderRadius: BorderRadius.circular(height / 2),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primary.withAlpha(77),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 600),
+                curve: AppAnimations.curveDefault,
+                width: constraints.maxWidth * progress.clamp(0.0, 1.0),
+                height: height,
+                decoration: BoxDecoration(
+                  color: fillColor,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
                 ),
               ),
             ],
-          ),
-        ),
-      ],
+          );
+        },
+      ),
     );
   }
 }

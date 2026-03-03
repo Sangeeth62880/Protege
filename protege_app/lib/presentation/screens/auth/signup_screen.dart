@@ -5,8 +5,10 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/utils/validators.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../core/constants/app_spacing.dart';
 import '../../widgets/common/custom_text_field.dart';
 import '../../widgets/buttons/primary_button.dart';
+import '../../widgets/icons/protege_diamond_icon.dart';
 
 /// Signup screen
 class SignupScreen extends ConsumerStatefulWidget {
@@ -62,27 +64,36 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 20),
-                // Back button
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: IconButton(
-                    onPressed: () => context.go('/login'),
-                    icon: const Icon(Icons.arrow_back_ios),
-                  ),
+                const SizedBox(height: AppSpacing.md),
+                // Back button & Logo
+                Row(
+                  children: [
+                    IconButton(
+                      padding: EdgeInsets.zero,
+                      alignment: Alignment.centerLeft,
+                      onPressed: () => context.go('/login'),
+                      icon: const Icon(Icons.arrow_back_ios, size: 24),
+                    ),
+                    const Spacer(),
+                    const ProtegeDiamondIcon(size: 32),
+                  ],
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: AppSpacing.xl),
                 // Create account text
                 Text(
-                  'Create Account 🎓',
-                  style: Theme.of(context).textTheme.displaySmall,
+                  'Create Account',
+                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.xs),
                 Text(
                   'Start your personalized learning journey',
-                  style: Theme.of(context).textTheme.bodyMedium,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: AppSpacing.xxl),
                 // Name field
                 CustomTextField(
                   controller: _nameController,
@@ -145,7 +156,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                 const SizedBox(height: 32),
                 // Signup button
                 PrimaryButton(
-                  text: AppStrings.signUp,
+                  label: AppStrings.signUp,
                   isLoading: authState.isLoading,
                   onPressed: _handleSignup,
                 ),

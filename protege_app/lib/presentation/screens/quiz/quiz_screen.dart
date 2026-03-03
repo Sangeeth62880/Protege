@@ -160,7 +160,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
           Expanded(
             flex: 2,
             child: PrimaryButton(
-              text: isLast ? 'Submit Quiz' : 'Next Question',
+              label: isLast ? 'Submit Quiz' : 'Next Question',
               onPressed: hasAnswer
                   ? () {
                       if (isLast) {

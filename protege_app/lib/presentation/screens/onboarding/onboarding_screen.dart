@@ -112,11 +112,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             Padding(
               padding: const EdgeInsets.all(24),
               child: PrimaryButton(
-                text: _currentPage == _pages.length - 1
+                label: _currentPage == _pages.length - 1
                     ? AppStrings.getStarted
                     : AppStrings.next,
                 onPressed: _nextPage,
-                backgroundColor: _pages[_currentPage].color,
               ),
             ),
           ],

@@ -195,7 +195,7 @@ class _SyllabusPreviewScreenState extends ConsumerState<SyllabusPreviewScreen> {
                 Expanded(
                   flex: 2,
                   child: PrimaryButton(
-                    text: 'Start Learning',
+                    label: 'Start Learning',
                     isLoading: saveState.isLoading,
                     onPressed: () => _onStartLearning(syllabus),
                     icon: Icons.rocket_launch,

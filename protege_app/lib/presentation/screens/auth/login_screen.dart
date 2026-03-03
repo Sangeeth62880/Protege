@@ -5,8 +5,10 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/utils/validators.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../core/constants/app_spacing.dart';
 import '../../widgets/common/custom_text_field.dart';
 import '../../widgets/buttons/primary_button.dart';
+import '../../widgets/icons/protege_diamond_icon.dart';
 
 /// Login screen
 class LoginScreen extends ConsumerStatefulWidget {
@@ -56,18 +58,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 40),
+                const SizedBox(height: AppSpacing.xxl),
+                // Logo
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: ProtegeDiamondIcon(size: 48),
+                ),
+                const SizedBox(height: AppSpacing.xl),
                 // Welcome back text
                 Text(
-                  'Welcome Back! 👋',
-                  style: Theme.of(context).textTheme.displaySmall,
+                  'Welcome Back',
+                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.xs),
                 Text(
                   'Sign in to continue your learning journey',
-                  style: Theme.of(context).textTheme.bodyMedium,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: AppSpacing.xxl),
                 // Email field
                 CustomTextField(
                   controller: _emailController,
@@ -110,7 +122,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: 24),
                 // Login button
                 PrimaryButton(
-                  text: AppStrings.login,
+                  label: AppStrings.login,
                   isLoading: authState.isLoading,
                   onPressed: _handleLogin,
                 ),

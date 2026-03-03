@@ -1,212 +1,206 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../constants/app_colors.dart';
 
-/// Protégé App Typography System
-/// Clear hierarchy with proper contrast for readability
+/// Protégé Design System — Typography
+/// Primary: Inter, Display: Plus Jakarta Sans, Code: JetBrains Mono
 class AppTypography {
-  // ═══════════════════════════════════════════════════════════════════════
-  // FONT FAMILY
-  // ═══════════════════════════════════════════════════════════════════════
-  
-  static const String fontFamily = 'Inter';
-  
-  // ═══════════════════════════════════════════════════════════════════════
-  // DISPLAY STYLES - For hero sections, splash screens
-  // ═══════════════════════════════════════════════════════════════════════
-  
-  static const TextStyle displayLarge = TextStyle(
-    fontFamily: fontFamily,
-    fontSize: 40,
-    fontWeight: FontWeight.w700,
-    color: AppColors.textPrimary,
-    letterSpacing: -1.0,
-    height: 1.2,
-  );
-  
-  static const TextStyle displayMedium = TextStyle(
-    fontFamily: fontFamily,
-    fontSize: 32,
-    fontWeight: FontWeight.w700,
-    color: AppColors.textPrimary,
-    letterSpacing: -0.5,
-    height: 1.25,
-  );
-  
-  static const TextStyle displaySmall = TextStyle(
-    fontFamily: fontFamily,
-    fontSize: 28,
-    fontWeight: FontWeight.w600,
-    color: AppColors.textPrimary,
-    letterSpacing: -0.25,
-    height: 1.3,
-  );
-  
-  // ═══════════════════════════════════════════════════════════════════════
-  // HEADLINE STYLES - For section headers
-  // ═══════════════════════════════════════════════════════════════════════
-  
-  static const TextStyle headlineLarge = TextStyle(
-    fontFamily: fontFamily,
-    fontSize: 24,
-    fontWeight: FontWeight.w600,
-    color: AppColors.textPrimary,
-    letterSpacing: 0,
-    height: 1.35,
-  );
-  
-  static const TextStyle headlineMedium = TextStyle(
-    fontFamily: fontFamily,
-    fontSize: 20,
-    fontWeight: FontWeight.w600,
-    color: AppColors.textPrimary,
-    letterSpacing: 0,
-    height: 1.4,
-  );
-  
-  static const TextStyle headlineSmall = TextStyle(
-    fontFamily: fontFamily,
-    fontSize: 18,
-    fontWeight: FontWeight.w600,
-    color: AppColors.textPrimary,
-    letterSpacing: 0,
-    height: 1.4,
-  );
-  
-  // ═══════════════════════════════════════════════════════════════════════
-  // TITLE STYLES - For card titles, list items
-  // ═══════════════════════════════════════════════════════════════════════
-  
-  static const TextStyle titleLarge = TextStyle(
-    fontFamily: fontFamily,
-    fontSize: 18,
-    fontWeight: FontWeight.w600,
-    color: AppColors.textPrimary,
-    letterSpacing: 0,
-    height: 1.4,
-  );
-  
-  static const TextStyle titleMedium = TextStyle(
-    fontFamily: fontFamily,
-    fontSize: 16,
-    fontWeight: FontWeight.w600,
-    color: AppColors.textPrimary,
-    letterSpacing: 0.1,
-    height: 1.45,
-  );
-  
-  static const TextStyle titleSmall = TextStyle(
-    fontFamily: fontFamily,
-    fontSize: 14,
-    fontWeight: FontWeight.w600,
-    color: AppColors.textPrimary,
-    letterSpacing: 0.1,
-    height: 1.45,
-  );
-  
-  // ═══════════════════════════════════════════════════════════════════════
-  // BODY STYLES - For paragraphs, descriptions
-  // ═══════════════════════════════════════════════════════════════════════
-  
-  static const TextStyle bodyLarge = TextStyle(
-    fontFamily: fontFamily,
-    fontSize: 16,
-    fontWeight: FontWeight.w400,
-    color: AppColors.textPrimary,
-    letterSpacing: 0.15,
-    height: 1.5,
-  );
-  
-  static const TextStyle bodyMedium = TextStyle(
-    fontFamily: fontFamily,
-    fontSize: 14,
-    fontWeight: FontWeight.w400,
-    color: AppColors.textSecondary,
-    letterSpacing: 0.15,
-    height: 1.5,
-  );
-  
-  static const TextStyle bodySmall = TextStyle(
-    fontFamily: fontFamily,
-    fontSize: 12,
-    fontWeight: FontWeight.w400,
-    color: AppColors.textSecondary,
-    letterSpacing: 0.2,
-    height: 1.5,
-  );
-  
-  // ═══════════════════════════════════════════════════════════════════════
-  // LABEL STYLES - For buttons, chips, tabs
-  // ═══════════════════════════════════════════════════════════════════════
-  
-  static const TextStyle labelLarge = TextStyle(
-    fontFamily: fontFamily,
-    fontSize: 14,
-    fontWeight: FontWeight.w600,
-    color: AppColors.textPrimary,
-    letterSpacing: 0.5,
-    height: 1.4,
-  );
-  
-  static const TextStyle labelMedium = TextStyle(
-    fontFamily: fontFamily,
-    fontSize: 12,
-    fontWeight: FontWeight.w600,
-    color: AppColors.textSecondary,
-    letterSpacing: 0.5,
-    height: 1.4,
-  );
-  
-  static const TextStyle labelSmall = TextStyle(
-    fontFamily: fontFamily,
-    fontSize: 10,
-    fontWeight: FontWeight.w600,
-    color: AppColors.textTertiary,
-    letterSpacing: 0.5,
-    height: 1.4,
-  );
-  
-  // ═══════════════════════════════════════════════════════════════════════
-  // SPECIAL STYLES
-  // ═══════════════════════════════════════════════════════════════════════
-  
-  /// Button text
-  static const TextStyle button = TextStyle(
-    fontFamily: fontFamily,
-    fontSize: 16,
-    fontWeight: FontWeight.w600,
-    color: AppColors.textOnPrimary,
-    letterSpacing: 0.5,
-    height: 1.2,
-  );
-  
-  /// Caption text
-  static const TextStyle caption = TextStyle(
-    fontFamily: fontFamily,
-    fontSize: 12,
-    fontWeight: FontWeight.w400,
-    color: AppColors.textTertiary,
-    letterSpacing: 0.2,
-    height: 1.4,
-  );
-  
-  /// Overline text (small uppercase)
-  static const TextStyle overline = TextStyle(
-    fontFamily: fontFamily,
-    fontSize: 10,
-    fontWeight: FontWeight.w600,
-    color: AppColors.textSecondary,
-    letterSpacing: 1.5,
-    height: 1.4,
-  );
-  
-  /// Link text
+  AppTypography._();
+
+  // ─── Display (Splash, celebrations, hero moments) ─────────────────────
+  static TextStyle get displayLarge => GoogleFonts.plusJakartaSans(
+        fontSize: 48,
+        fontWeight: FontWeight.w800,
+        letterSpacing: -1.5,
+        color: AppColors.textPrimary,
+      );
+
+  static TextStyle get displayMedium => GoogleFonts.plusJakartaSans(
+        fontSize: 36,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -1.0,
+        color: AppColors.textPrimary,
+      );
+
+  static TextStyle get displaySmall => GoogleFonts.plusJakartaSans(
+        fontSize: 28,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.5,
+        color: AppColors.textPrimary,
+      );
+
+  // ─── Headings ─────────────────────────────────────────────────────────
+  static TextStyle get headlineLarge => GoogleFonts.inter(
+        fontSize: 24,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.3,
+        color: AppColors.textPrimary,
+      );
+
+  static TextStyle get headlineMedium => GoogleFonts.inter(
+        fontSize: 20,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.2,
+        color: AppColors.textPrimary,
+      );
+
+  static TextStyle get headlineSmall => GoogleFonts.inter(
+        fontSize: 18,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0,
+        color: AppColors.textPrimary,
+      );
+
+  // ─── Title (legacy — same family as headings) ─────────────────────────
+  static TextStyle get titleLarge => headlineSmall;
+
+  static TextStyle get titleMedium => GoogleFonts.inter(
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.1,
+        color: AppColors.textPrimary,
+      );
+
+  static TextStyle get titleSmall => GoogleFonts.inter(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.1,
+        color: AppColors.textPrimary,
+      );
+
+  // ─── Category Labels (UPPERCASE, tracked out) ─────────────────────────
+  static TextStyle get labelCategory => GoogleFonts.inter(
+        fontSize: 12,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 1.2,
+        color: AppColors.textSecondary,
+      );
+
+  static TextStyle get labelLarge => GoogleFonts.inter(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.5,
+        color: AppColors.textPrimary,
+      );
+
+  static TextStyle get labelMedium => GoogleFonts.inter(
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.5,
+        color: AppColors.textSecondary,
+      );
+
+  static TextStyle get labelSmall => GoogleFonts.inter(
+        fontSize: 11,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.8,
+        color: AppColors.textTertiary,
+      );
+
+  // ─── Body ─────────────────────────────────────────────────────────────
+  static TextStyle get bodyLarge => GoogleFonts.inter(
+        fontSize: 16,
+        fontWeight: FontWeight.w400,
+        height: 1.6,
+        letterSpacing: 0,
+        color: AppColors.textPrimary,
+      );
+
+  static TextStyle get bodyMedium => GoogleFonts.inter(
+        fontSize: 14,
+        fontWeight: FontWeight.w400,
+        height: 1.5,
+        letterSpacing: 0,
+        color: AppColors.textPrimary,
+      );
+
+  static TextStyle get bodySmall => GoogleFonts.inter(
+        fontSize: 12,
+        fontWeight: FontWeight.w400,
+        height: 1.4,
+        letterSpacing: 0,
+        color: AppColors.textSecondary,
+      );
+
+  // ─── Buttons ──────────────────────────────────────────────────────────
+  static TextStyle get button => buttonLarge;
+
+  static TextStyle get buttonLarge => GoogleFonts.inter(
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.2,
+        color: AppColors.textOnPrimary,
+      );
+
+  static TextStyle get buttonMedium => GoogleFonts.inter(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.2,
+        color: AppColors.textOnPrimary,
+      );
+
+  static TextStyle get buttonSmall => GoogleFonts.inter(
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.3,
+        color: AppColors.textOnPrimary,
+      );
+
+  // ─── Stats / Numbers ──────────────────────────────────────────────────
+  static TextStyle get statLarge => GoogleFonts.plusJakartaSans(
+        fontSize: 40,
+        fontWeight: FontWeight.w800,
+        letterSpacing: -0.5,
+        color: AppColors.textPrimary,
+      );
+
+  static TextStyle get statMedium => GoogleFonts.plusJakartaSans(
+        fontSize: 28,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.3,
+        color: AppColors.textPrimary,
+      );
+
+  static TextStyle get statSmall => GoogleFonts.plusJakartaSans(
+        fontSize: 20,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.2,
+        color: AppColors.textPrimary,
+      );
+
+  // ─── Code ─────────────────────────────────────────────────────────────
+  static TextStyle get codeLarge => GoogleFonts.jetBrainsMono(
+        fontSize: 14,
+        fontWeight: FontWeight.w400,
+        height: 1.6,
+        color: AppColors.textOnDark,
+      );
+
+  static TextStyle get codeSmall => GoogleFonts.jetBrainsMono(
+        fontSize: 12,
+        fontWeight: FontWeight.w400,
+        height: 1.5,
+        color: AppColors.textOnDark,
+      );
+
+  // ─── Special ──────────────────────────────────────────────────────────
+  static TextStyle get caption => bodySmall.copyWith(
+        color: AppColors.textTertiary,
+      );
+
+  static TextStyle get overline => GoogleFonts.inter(
+        fontSize: 10,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 1.5,
+        color: AppColors.textSecondary,
+      );
+
   static TextStyle get link => bodyMedium.copyWith(
-    color: AppColors.textLink,
-    decoration: TextDecoration.underline,
-  );
-  
-  /// Error text
+        color: AppColors.textLink,
+        decoration: TextDecoration.underline,
+      );
+
   static TextStyle get error => bodySmall.copyWith(
-    color: AppColors.error,
-  );
+        color: AppColors.error,
+      );
 }

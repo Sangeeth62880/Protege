@@ -125,7 +125,7 @@ class _GoalSelectionScreenState extends ConsumerState<GoalSelectionScreen> {
             const SizedBox(height: 48),
             
             PrimaryButton(
-              text: 'Generate Syllabus',
+              label: 'Generate Syllabus',
               onPressed: _onGenerate,
               icon: Icons.auto_awesome,
             ),

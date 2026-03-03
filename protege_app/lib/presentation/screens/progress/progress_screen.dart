@@ -599,7 +599,7 @@ class _LearningPathProgress extends StatelessWidget {
           const SizedBox(height: 12),
           AnimatedProgressBar(
             progress: progress,
-            gradient: LinearGradient(colors: [color, color.withAlpha(179)]),
+            fillColor: color,
           ),
         ],
       ),

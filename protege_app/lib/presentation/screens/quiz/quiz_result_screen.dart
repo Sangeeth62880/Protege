@@ -58,7 +58,7 @@ class QuizResultScreen extends ConsumerWidget {
               _buildScoreCard(context, result),
               const SizedBox(height: 40),
               PrimaryButton(
-                text: 'Initial Lesson', // Or Back to Home
+                label: 'Back to Lesson',
                 onPressed: () {
                   if (onReset != null) {
                     onReset!();
