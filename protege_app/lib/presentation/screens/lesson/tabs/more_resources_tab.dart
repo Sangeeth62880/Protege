@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../data/models/resource_models.dart';
+import '../../../widgets/resources/textbook_resource_card.dart';
 
-/// Tab for displaying additional resources: Books, Q&A, Courses, Docs
+/// Tab for displaying additional resources: Textbooks, Books, Q&A, Courses, Docs
 class MoreResourcesTab extends StatelessWidget {
   final List<BookResource> books;
+  final List<TextbookResource> textbooks;
   final List<QAResource> questions;
   final List<CourseResource> courses;
   final List<DocResource> docs;
@@ -13,12 +15,13 @@ class MoreResourcesTab extends StatelessWidget {
   const MoreResourcesTab({
     super.key,
     this.books = const [],
+    this.textbooks = const [],
     this.questions = const [],
     this.courses = const [],
     this.docs = const [],
   });
 
-  bool get isEmpty => books.isEmpty && questions.isEmpty && courses.isEmpty && docs.isEmpty;
+  bool get isEmpty => books.isEmpty && textbooks.isEmpty && questions.isEmpty && courses.isEmpty && docs.isEmpty;
 
   @override
   Widget build(BuildContext context) {
@@ -43,6 +46,23 @@ class MoreResourcesTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        // Textbooks Section (OpenStax)
+        if (textbooks.isNotEmpty) ...[
+          _sectionHeader(context, Icons.menu_book_rounded, 'Recommended Textbooks', AppColors.success),
+          ...textbooks.map((t) => TextbookResourceCard(textbook: t)),
+          Padding(
+            padding: const EdgeInsets.only(top: 4, bottom: 20),
+            child: Text(
+              'Content sourced from OpenStax (openstax.org). Licensed under Creative Commons Attribution License 4.0 (CC BY 4.0).',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textTertiary,
+                    fontSize: 10,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
+
         // Books Section
         if (books.isNotEmpty) ...[
           _sectionHeader(context, Icons.menu_book, 'Books', Colors.brown),

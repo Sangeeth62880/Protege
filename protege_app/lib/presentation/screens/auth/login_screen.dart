@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_strings.dart';
+import '../../../core/constants/app_design.dart';
+import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/validators.dart';
 import '../../../providers/auth_provider.dart';
-import '../../../core/constants/app_spacing.dart';
-import '../../widgets/common/custom_text_field.dart';
+import '../../../providers/auth_provider.dart';
 import '../../widgets/buttons/primary_button.dart';
-import '../../widgets/icons/protege_diamond_icon.dart';
+import '../../widgets/auth/social_auth_buttons.dart';
+
 
 /// Login screen
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
-
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
@@ -22,6 +23,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _isLoading = false;
   bool _obscurePassword = true;
 
   @override
@@ -31,162 +33,108 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
-  Future<void> _handleLogin() async {
-    if (_formKey.currentState!.validate()) {
+  Future<void> _login() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _isLoading = true);
+    try {
       await ref.read(authNotifierProvider.notifier).signIn(
-            _emailController.text.trim(),
-            _passwordController.text,
-          );
-
-      final authState = ref.read(authNotifierProvider);
-      if (authState.hasValue && authState.value != null && mounted) {
-        context.go('/home');
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
+      if (mounted) context.go('/home');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Login failed: $e')),
+        );
       }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final authState = ref.watch(authNotifierProvider);
-
     return Scaffold(
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          physics: const BouncingScrollPhysics(),
+          padding: AppSpacing.screenH.copyWith(top: 60, bottom: 32),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                PhosphorIcon(
+                  PhosphorIcons.graduationCap(PhosphorIconsStyle.fill),
+                  size: 48,
+                  color: AppColors.brand,
+                ),
                 const SizedBox(height: AppSpacing.xxl),
-                // Logo
-                const Align(
-                  alignment: Alignment.centerLeft,
-                  child: ProtegeDiamondIcon(size: 48),
-                ),
-                const SizedBox(height: AppSpacing.xl),
-                // Welcome back text
-                Text(
-                  'Welcome Back',
-                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                Text('Welcome Back', style: AppTypography.displaySm),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
                   'Sign in to continue your learning journey',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSecondary,
+                  style: AppTypography.bodyLg,
+                ),
+                const SizedBox(height: AppSpacing.xxxl),
+
+                SocialAuthButtons(isLoading: _isLoading),
+
+                // Email
+                TextFormField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  validator: Validators.validateEmail,
+                  decoration: const InputDecoration(
+                    hintText: 'Email address',
+                    prefixIcon: Icon(Icons.email_outlined, size: 20),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+
+                // Password
+                TextFormField(
+                  controller: _passwordController,
+                  obscureText: _obscurePassword,
+                  validator: Validators.validatePassword,
+                  decoration: InputDecoration(
+                    hintText: 'Password',
+                    prefixIcon: const Icon(Icons.lock_outline, size: 20),
+                    suffixIcon: IconButton(
+                      icon: PhosphorIcon(
+                        _obscurePassword ? PhosphorIcons.eye() : PhosphorIcons.eyeSlash(),
+                        size: 20,
+                      ),
+                      onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                    ),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xxl),
-                // Email field
-                CustomTextField(
-                  controller: _emailController,
-                  label: AppStrings.email,
-                  hintText: 'Enter your email',
-                  keyboardType: TextInputType.emailAddress,
-                  prefixIcon: Icons.email_outlined,
-                  validator: Validators.validateEmail,
-                ),
-                const SizedBox(height: 16),
-                // Password field
-                CustomTextField(
-                  controller: _passwordController,
-                  label: AppStrings.password,
-                  hintText: 'Enter your password',
-                  obscureText: _obscurePassword,
-                  prefixIcon: Icons.lock_outline,
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                      color: AppColors.textSecondary,
-                    ),
-                    onPressed: () {
-                      setState(() => _obscurePassword = !_obscurePassword);
-                    },
-                  ),
-                  validator: (value) => Validators.validateRequired(value, 'Password'),
-                ),
-                const SizedBox(height: 12),
-                // Forgot password
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () {
-                      // TODO: Navigate to forgot password
-                    },
-                    child: const Text(AppStrings.forgotPassword),
-                  ),
-                ),
-                const SizedBox(height: 24),
+
                 // Login button
                 PrimaryButton(
-                  label: AppStrings.login,
-                  isLoading: authState.isLoading,
-                  onPressed: _handleLogin,
+                  label: 'Sign In',
+                  onPressed: _login,
+                  isLoading: _isLoading,
                 ),
-                // Error message
-                if (authState.hasError)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 16),
-                    child: Text(
-                      authState.error.toString(),
-                      style: const TextStyle(color: AppColors.error),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                const SizedBox(height: 24),
-                // Divider
-                Row(
-                  children: [
-                    const Expanded(child: Divider()),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        AppStrings.orContinueWith,
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    ),
-                    const Expanded(child: Divider()),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                // Social login buttons
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _SocialButton(
-                      icon: Icons.g_mobiledata_rounded,
-                        onTap: () async {
-                          await ref.read(authNotifierProvider.notifier).signInWithGoogle();
-                          final authState = ref.read(authNotifierProvider);
-                          if (authState.hasValue && authState.value != null && context.mounted) {
-                            context.go('/home');
-                          }
-                        },
-                    ),
-                    const SizedBox(width: 16),
-                    _SocialButton(
-                      icon: Icons.apple_rounded,
-                      onTap: () {
-                        // TODO: Apple sign in
-                      },
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 32),
+                const SizedBox(height: AppSpacing.xl),
+
                 // Sign up link
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      AppStrings.dontHaveAccount,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                    TextButton(
-                      onPressed: () => context.go('/signup'),
-                      child: const Text(AppStrings.signUp),
+                    Text("Don't have an account? ", style: AppTypography.bodyMd),
+                    GestureDetector(
+                      onTap: () => context.go('/signup'),
+                      child: Text(
+                        'Sign Up',
+                        style: AppTypography.bodyMd.copyWith(
+                          color: AppColors.brand,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -194,34 +142,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _SocialButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-
-  const _SocialButton({
-    required this.icon,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        width: 60,
-        height: 60,
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.textLight.withValues(alpha: 0.3)),
-        ),
-        child: Icon(icon, size: 32, color: AppColors.textPrimary),
       ),
     );
   }

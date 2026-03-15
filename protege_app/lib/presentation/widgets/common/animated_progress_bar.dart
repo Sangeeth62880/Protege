@@ -1,49 +1,44 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_spacing.dart';
-import '../../../core/constants/app_animations.dart';
+import '../../../core/constants/app_design.dart';
 
-/// Smoothly animating progress bar with green fill on light track.
+/// Horizontal animated progress bar
 class AnimatedProgressBar extends StatelessWidget {
-  final double progress; // 0.0 to 1.0
+  final double progress; // 0.0 – 1.0
+  final Color? fillColor;
   final double height;
-  final Color fillColor;
-  final Color trackColor;
 
   const AnimatedProgressBar({
     super.key,
     required this.progress,
-    this.height = 8,
-    this.fillColor = AppColors.green,
-    this.trackColor = AppColors.borderLight,
+    this.fillColor,
+    this.height = 6,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: height,
-      decoration: BoxDecoration(
-        color: trackColor,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
-      ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          return Stack(
-            children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 600),
-                curve: AppAnimations.curveDefault,
-                width: constraints.maxWidth * progress.clamp(0.0, 1.0),
-                height: height,
-                decoration: BoxDecoration(
-                  color: fillColor,
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
-                ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Container(
+          height: height,
+          decoration: BoxDecoration(
+            color: AppColors.borderLight,
+            borderRadius: BorderRadius.circular(AppRadius.full),
+          ),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 600),
+              curve: AppMotion.curveStandard,
+              width: constraints.maxWidth * progress.clamp(0.0, 1.0),
+              decoration: BoxDecoration(
+                color: fillColor ?? AppColors.success,
+                borderRadius: BorderRadius.circular(AppRadius.full),
               ),
-            ],
-          );
-        },
-      ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

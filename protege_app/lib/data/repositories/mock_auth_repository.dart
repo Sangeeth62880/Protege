@@ -55,6 +55,12 @@ class MockAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<Result<UserModel>> signInWithApple() async {
+    await Future.delayed(const Duration(seconds: 1));
+    return _login(email: 'demo.apple@example.com', name: 'Apple Demo User');
+  }
+
+  @override
   Future<Result<void>> signOut() async {
     await Future.delayed(const Duration(milliseconds: 500));
     _currentUser = null;

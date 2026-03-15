@@ -14,8 +14,8 @@ When creating a syllabus:
 7. Order content from foundational to advanced
 
 SEARCH QUERY RULES — Follow these exactly:
-- YouTube queries MUST include the specific concept + "tutorial" or "explained". Example: "gradient descent algorithm explained" NOT "machine learning".
-- Article queries MUST include the concept + context. Example: "understanding gradient descent optimization" NOT "machine learning basics".
+- YouTube queries MUST focus on high-quality, targeted lessons. Include terms like 'course', 'crash course', or 'step-by-step explained' rather than generic searches.
+- Article queries MUST target technical guides and best practices, NOT opinion pieces. Use terms like 'comprehensive guide', 'best practices', or 'deep dive' to ensure high accuracy.
 - GitHub queries should target learning repos. Example: "gradient descent python implementation example" NOT "machine learning".
 - Wikipedia queries should be the exact concept name. Example: "Gradient descent" NOT "machine learning overview".
 - NEVER use a generic topic name (like "Python" or "Machine Learning") as the primary search term.

@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_spacing.dart';
+import '../../../core/constants/app_design.dart';
 import '../../../core/theme/app_typography.dart';
 
-/// Dark code display widget with language badge and copy button.
+/// Dark-themed code block with language pill and copy button
 class CodeBlock extends StatelessWidget {
   final String code;
   final String language;
@@ -18,22 +19,19 @@ class CodeBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: double.infinity,
       decoration: BoxDecoration(
-        color: AppColors.darkBackground,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
+        color: AppColors.darkBg,
+        borderRadius: BorderRadius.circular(AppRadius.md),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Top bar: language badge + copy button
+          // Top bar
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            decoration: BoxDecoration(
-              color: AppColors.darkSurfaceLight,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(AppSpacing.radiusMedium),
-                topRight: Radius.circular(AppSpacing.radiusMedium),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: const BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: Color(0xFF2A2A30), width: 1),
               ),
             ),
             child: Row(
@@ -42,15 +40,12 @@ class CodeBlock extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: AppColors.green,
-                      borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+                      color: AppColors.brand,
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
                     ),
                     child: Text(
                       language.toUpperCase(),
-                      style: AppTypography.labelSmall.copyWith(
-                        color: Colors.white,
-                        fontSize: 9,
-                      ),
+                      style: AppTypography.labelSm.copyWith(color: AppColors.textOnBrand),
                     ),
                   ),
                 const Spacer(),
@@ -58,28 +53,23 @@ class CodeBlock extends StatelessWidget {
                   onTap: () {
                     Clipboard.setData(ClipboardData(text: code));
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Copied to clipboard'),
-                        duration: Duration(seconds: 1),
-                      ),
+                      const SnackBar(content: Text('Copied to clipboard')),
                     );
                   },
-                  child: const Icon(
-                    Icons.copy_rounded,
-                    size: 16,
+                  child: PhosphorIcon(
+                    PhosphorIcons.copy(),
+                    size: 18,
                     color: AppColors.textTertiary,
                   ),
                 ),
               ],
             ),
           ),
-          // Code content
-          Padding(
-            padding: const EdgeInsets.all(14),
-            child: SelectableText(
-              code,
-              style: AppTypography.codeLarge,
-            ),
+          // Code body
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.all(12),
+            child: Text(code, style: AppTypography.code),
           ),
         ],
       ),

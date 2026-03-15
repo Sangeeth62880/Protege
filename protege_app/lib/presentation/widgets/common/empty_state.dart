@@ -1,21 +1,23 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
-import 'custom_button.dart';
+import '../../../core/constants/app_design.dart';
+import '../../../core/theme/app_typography.dart';
+import '../buttons/primary_button.dart';
 
-/// Empty state widget
+/// Empty state widget — shown when there's no data
 class EmptyState extends StatelessWidget {
+  final IconData icon;
   final String title;
-  final String message;
-  final IconData? icon;
-  final String? actionText;
+  final String? subtitle;
+  final String? actionLabel;
   final VoidCallback? onAction;
 
   const EmptyState({
     super.key,
+    required this.icon,
     required this.title,
-    required this.message,
-    this.icon,
-    this.actionText,
+    this.subtitle,
+    this.actionLabel,
     this.onAction,
   });
 
@@ -23,45 +25,26 @@ class EmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32.0),
+        padding: const EdgeInsets.all(AppSpacing.xxxl),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
-                shape: BoxShape.circle,
+            Icon(icon, size: 64, color: AppColors.textTertiary),
+            const SizedBox(height: AppSpacing.xl),
+            Text(title, style: AppTypography.headingSm, textAlign: TextAlign.center),
+            if (subtitle != null) ...[
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                subtitle!,
+                style: AppTypography.bodyMd.copyWith(color: AppColors.textTertiary),
+                textAlign: TextAlign.center,
               ),
-              child: Icon(
-                icon ?? Icons.inbox_rounded,
-                size: 48,
-                color: AppColors.primary,
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              message,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-              textAlign: TextAlign.center,
-            ),
-            if (actionText != null && onAction != null) ...[
-              const SizedBox(height: 24),
-              CustomButton(
-                text: actionText!,
-                onPressed: onAction,
-                width: 150,
+            ],
+            if (actionLabel != null && onAction != null) ...[
+              const SizedBox(height: AppSpacing.xxl),
+              SizedBox(
+                width: 200,
+                child: PrimaryButton(label: actionLabel!, onPressed: onAction),
               ),
             ],
           ],

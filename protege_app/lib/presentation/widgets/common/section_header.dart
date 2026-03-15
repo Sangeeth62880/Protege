@@ -2,53 +2,33 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 
-/// Section header with optional action button
+/// Section header widget: title + optional "See All" action
 class SectionHeader extends StatelessWidget {
   final String title;
-  final String? actionText;
-  final VoidCallback? onActionTap;
-  final IconData? actionIcon;
-  
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
   const SectionHeader({
     super.key,
     required this.title,
-    this.actionText,
-    this.onActionTap,
-    this.actionIcon,
+    this.actionLabel,
+    this.onAction,
   });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            title,
-            style: AppTypography.headlineSmall,
-          ),
-          if (actionText != null || actionIcon != null)
+          Text(title, style: AppTypography.headingMd),
+          if (actionLabel != null)
             GestureDetector(
-              onTap: onActionTap,
-              child: Row(
-                children: [
-                  if (actionText != null)
-                    Text(
-                      actionText!,
-                      style: AppTypography.labelMedium.copyWith(
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  if (actionIcon != null) ...[
-                    const SizedBox(width: 4),
-                    Icon(
-                      actionIcon,
-                      color: AppColors.primary,
-                      size: 16,
-                    ),
-                  ],
-                ],
+              onTap: onAction,
+              child: Text(
+                actionLabel!,
+                style: AppTypography.bodyMd.copyWith(color: AppColors.brand),
               ),
             ),
         ],

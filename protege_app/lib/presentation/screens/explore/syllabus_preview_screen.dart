@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_design.dart';
+import '../../../core/theme/app_typography.dart';
 import '../../../providers/learning_provider.dart';
+import '../../../data/models/learning_path_model.dart';
 import '../../widgets/buttons/primary_button.dart';
-import '../../../data/models/learning_path_model.dart'; // For SyllabusModel
+import '../../widgets/common/staggered_item.dart';
 
 class SyllabusPreviewScreen extends ConsumerStatefulWidget {
   const SyllabusPreviewScreen({super.key});
@@ -14,22 +18,14 @@ class SyllabusPreviewScreen extends ConsumerStatefulWidget {
 }
 
 class _SyllabusPreviewScreenState extends ConsumerState<SyllabusPreviewScreen> {
-  
   Future<void> _onStartLearning(SyllabusModel? syllabus) async {
     if (syllabus == null) return;
-    
     final path = await ref.read(saveSyllabusProvider.notifier).save(syllabus);
-    
     if (path != null && mounted) {
-      // Clear navigation stack and go to the path
-      // Use push to preserve history or go to home then push
-      // Simple fix: push so 'Back' works (returns to Preview, which is acceptable)
       context.push('/learn/${path.id}');
-    } else {
-       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text('Failed to save path. Please try again.'),
-            backgroundColor: AppColors.error),
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to save. Try again.'), backgroundColor: AppColors.error),
       );
     }
   }
@@ -38,209 +34,218 @@ class _SyllabusPreviewScreenState extends ConsumerState<SyllabusPreviewScreen> {
   Widget build(BuildContext context) {
     final syllabusState = ref.watch(syllabusGeneratorProvider);
     final saveState = ref.watch(saveSyllabusProvider);
-    
-    final syllabus = syllabusState.valueOrNull;
-
-    if (syllabus == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Error')),
-        body: Center(child: Text('No syllabus generated. Please try again.')),
-      );
-    }
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Preview Syllabus'),
+        backgroundColor: Colors.transparent,
         leading: IconButton(
-          icon: const Icon(Icons.close),
-          onPressed: () => context.pop(), // Cancel
+          icon: PhosphorIcon(PhosphorIcons.arrowLeft(), size: 22),
+          onPressed: () {
+            ref.read(syllabusGeneratorProvider.notifier).reset();
+            context.pop();
+          },
         ),
+        title: Text('Syllabus Preview', style: AppTypography.headingSm),
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Title & Description
-                  Text(
-                    syllabus.topic,
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    syllabus.description,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: AppColors.textSecondary,
-                      height: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  // Metadata
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      body: syllabusState.when(
+        data: (syllabus) {
+          if (syllabus == null) {
+            return Center(
+              child: Text('No syllabus data', style: AppTypography.bodyMd),
+            );
+          }
+
+          return Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: AppSpacing.screenH.copyWith(top: 8, bottom: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _StatBadge(
-                        icon: Icons.timer,
-                        label: '${syllabus.totalDurationHours} Hours',
-                        color: AppColors.info,
+                      // Header
+                      StaggeredItem(
+                        index: 0,
+                        child: Text(syllabus.topic, style: AppTypography.displaySm),
                       ),
-                      _StatBadge(
-                        icon: Icons.speed,
-                        label: syllabus.difficulty,
-                        color: AppColors.warning,
+                      const SizedBox(height: AppSpacing.sm),
+                      StaggeredItem(
+                        index: 1,
+                        child: Text(
+                          syllabus.description,
+                          style: AppTypography.bodyLg,
+                        ),
                       ),
-                      _StatBadge(
-                        icon: Icons.layers,
-                        label: '${syllabus.modules.length} Modules',
-                        color: AppColors.success,
+                      const SizedBox(height: AppSpacing.xl),
+
+                      // Stats row
+                      StaggeredItem(
+                        index: 2,
+                        child: Row(
+                          children: [
+                            _StatBadge(
+                              icon: PhosphorIcons.stack(PhosphorIconsStyle.fill),
+                              color: AppColors.brand,
+                              label: '${syllabus.modules.length} modules',
+                            ),
+                            const SizedBox(width: AppSpacing.md),
+                            _StatBadge(
+                              icon: PhosphorIcons.bookOpen(PhosphorIconsStyle.fill),
+                              color: AppColors.success,
+                              label: '${syllabus.modules.fold<int>(0, (sum, m) => sum + m.lessons.length)} lessons',
+                            ),
+                            const SizedBox(width: AppSpacing.md),
+                            _StatBadge(
+                              icon: PhosphorIcons.clock(PhosphorIconsStyle.fill),
+                              color: AppColors.accentOrange,
+                              label: '${syllabus.totalDurationHours}h',
+                            ),
+                          ],
+                        ),
                       ),
+                      const SizedBox(height: AppSpacing.xxxl),
+
+                      // Modules
+                      ...syllabus.modules.asMap().entries.map((entry) {
+                        final module = entry.value;
+                        return StaggeredItem(
+                          index: 3 + entry.key,
+                          child: _ModuleCard(module: module, index: entry.key),
+                        );
+                      }),
                     ],
                   ),
-                  const SizedBox(height: 32),
-                  
-                  // Modules List
-                  Text(
-                    'Curriculum',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  ...syllabus.modules.map((module) => Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(
-                        color: AppColors.textLight.withValues(alpha: 0.1),
-                      ),
-                    ),
-                    child: ExpansionTile(
-                      title: Text(
-                        'Module ${module.moduleNumber}: ${module.title}',
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      subtitle: Text(
-                        '${module.lessons.length} Lessons • ${module.durationHours} Hours',
-                        style: TextStyle(color: AppColors.textLight, fontSize: 13),
-                      ),
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Text(module.description, style: TextStyle(color: AppColors.textSecondary)),
-                              const SizedBox(height: 8),
-                              const Divider(),
-                              ...module.lessons.map((lesson) => Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 4),
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.play_circle_outline, size: 16, color: AppColors.primary),
-                                    const SizedBox(width: 8),
-                                    Expanded(child: Text(lesson.title, maxLines: 1, overflow: TextOverflow.ellipsis)),
-                                    Text('${lesson.durationMinutes}m', style: TextStyle(color: AppColors.textLight, fontSize: 12)),
-                                  ],
-                                ),
-                              )).toList(),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  )).toList(),
-                  
-                  const SizedBox(height: 24),
-                ],
+                ),
               ),
-            ),
-          ),
-          
-          // Action Bar
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, -4),
+
+              // Bottom CTA
+              Container(
+                padding: EdgeInsets.fromLTRB(
+                  AppSpacing.xl,
+                  AppSpacing.xl,
+                  AppSpacing.xl,
+                  AppSpacing.xl + AppSpacing.navbarClearance,
                 ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => context.pop(),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      side: const BorderSide(color: AppColors.primary),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: const Text('Cancel'),
-                  ),
+                decoration: const BoxDecoration(
+                  color: AppColors.surface,
+                  border: Border(top: BorderSide(color: AppColors.borderLight)),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  flex: 2,
-                  child: PrimaryButton(
+                child: saveState.when(
+                  data: (_) => PrimaryButton(
                     label: 'Start Learning',
-                    isLoading: saveState.isLoading,
                     onPressed: () => _onStartLearning(syllabus),
-                    icon: Icons.rocket_launch,
+                  ),
+                  loading: () => const PrimaryButton(label: 'Saving...', isLoading: true),
+                  error: (_, __) => PrimaryButton(
+                    label: 'Retry',
+                    onPressed: () => _onStartLearning(syllabus),
                   ),
                 ),
-              ],
-            ),
-          ),
-        ],
+              ),
+            ],
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator(color: AppColors.brand)),
+        error: (e, __) => Center(child: Text('Error: $e', style: AppTypography.bodyMd)),
       ),
     );
   }
 }
 
 class _StatBadge extends StatelessWidget {
-  final IconData icon;
-  final String label;
+  final PhosphorIconData icon;
   final Color color;
-
-  const _StatBadge({
-    required this.icon,
-    required this.label,
-    required this.color,
-  });
+  final String label;
+  const _StatBadge({required this.icon, required this.color, required this.label});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
+        color: color.withAlpha(20),
+        borderRadius: BorderRadius.circular(AppRadius.full),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: color),
-          const SizedBox(width: 8),
-          Text(
-            label[0].toUpperCase() + label.substring(1),
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.w600,
-              fontSize: 12,
+          PhosphorIcon(icon, size: 14, color: color),
+          const SizedBox(width: 4),
+          Text(label, style: AppTypography.bodySm.copyWith(color: color, fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+}
+
+class _ModuleCard extends StatelessWidget {
+  final ModuleModel module;
+  final int index;
+  const _ModuleCard({required this.module, required this.index});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.lg),
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        boxShadow: AppShadow.sm,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: AppColors.brandLight,
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+                child: Center(
+                  child: Text(
+                    '${index + 1}',
+                    style: AppTypography.headingSm.copyWith(fontSize: 13, color: AppColors.brand),
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Text(module.title, style: AppTypography.headingSm),
+              ),
+            ],
+          ),
+          if (module.description != null && module.description!.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Padding(
+              padding: const EdgeInsets.only(left: 40),
+              child: Text(module.description!, style: AppTypography.bodySm, maxLines: 2, overflow: TextOverflow.ellipsis),
+            ),
+          ],
+          const SizedBox(height: AppSpacing.md),
+          Padding(
+            padding: const EdgeInsets.only(left: 40),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: module.lessons.map((lesson) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 3),
+                  child: Row(
+                    children: [
+                      PhosphorIcon(PhosphorIcons.circle(), size: 8, color: AppColors.textTertiary),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Text(lesson.title, style: AppTypography.bodyMd),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
             ),
           ),
         ],

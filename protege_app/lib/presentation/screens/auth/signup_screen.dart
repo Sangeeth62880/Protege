@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_strings.dart';
+import '../../../core/constants/app_design.dart';
+import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/validators.dart';
 import '../../../providers/auth_provider.dart';
-import '../../../core/constants/app_spacing.dart';
-import '../../widgets/common/custom_text_field.dart';
+import '../../../providers/auth_provider.dart';
 import '../../widgets/buttons/primary_button.dart';
-import '../../widgets/icons/protege_diamond_icon.dart';
+import '../../widgets/auth/social_auth_buttons.dart';
 
 /// Signup screen
 class SignupScreen extends ConsumerStatefulWidget {
   const SignupScreen({super.key});
-
   @override
   ConsumerState<SignupScreen> createState() => _SignupScreenState();
 }
@@ -23,165 +23,138 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
+  bool _isLoading = false;
   bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true;
 
   @override
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
-    _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  Future<void> _handleSignup() async {
-    if (_formKey.currentState!.validate()) {
+  Future<void> _signup() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _isLoading = true);
+    try {
       await ref.read(authNotifierProvider.notifier).signUp(
-            email: _emailController.text.trim(),
-            password: _passwordController.text,
-            displayName: _nameController.text.trim(),
-          );
-
-      final authState = ref.read(authNotifierProvider);
-      if (authState.hasValue && authState.value != null && mounted) {
-        context.go('/home');
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        displayName: _nameController.text.trim(),
+      );
+      if (mounted) context.go('/home');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Sign up failed: $e')),
+        );
       }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final authState = ref.watch(authNotifierProvider);
-
     return Scaffold(
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          physics: const BouncingScrollPhysics(),
+          padding: AppSpacing.screenH.copyWith(top: 20, bottom: 32),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: AppSpacing.md),
-                // Back button & Logo
                 Row(
                   children: [
                     IconButton(
-                      padding: EdgeInsets.zero,
-                      alignment: Alignment.centerLeft,
                       onPressed: () => context.go('/login'),
-                      icon: const Icon(Icons.arrow_back_ios, size: 24),
+                      icon: PhosphorIcon(PhosphorIcons.arrowLeft(), size: 24),
                     ),
                     const Spacer(),
-                    const ProtegeDiamondIcon(size: 32),
+                    PhosphorIcon(
+                      PhosphorIcons.graduationCap(PhosphorIconsStyle.fill),
+                      size: 32,
+                      color: AppColors.brand,
+                    ),
                   ],
                 ),
                 const SizedBox(height: AppSpacing.xl),
-                // Create account text
-                Text(
-                  'Create Account',
-                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                Text('Create Account', style: AppTypography.displaySm),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
                   'Start your personalized learning journey',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSecondary,
+                  style: AppTypography.bodyLg,
+                ),
+                const SizedBox(height: AppSpacing.xxxl),
+
+                SocialAuthButtons(isLoading: _isLoading),
+
+                // Name
+                TextFormField(
+                  controller: _nameController,
+                  validator: (v) => v == null || v.trim().isEmpty ? 'Name is required' : null,
+                  decoration: const InputDecoration(
+                    hintText: 'Full name',
+                    prefixIcon: Icon(Icons.person_outline, size: 20),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+
+                // Email
+                TextFormField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  validator: Validators.validateEmail,
+                  decoration: const InputDecoration(
+                    hintText: 'Email address',
+                    prefixIcon: Icon(Icons.email_outlined, size: 20),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+
+                // Password
+                TextFormField(
+                  controller: _passwordController,
+                  obscureText: _obscurePassword,
+                  validator: Validators.validatePassword,
+                  decoration: InputDecoration(
+                    hintText: 'Password',
+                    prefixIcon: const Icon(Icons.lock_outline, size: 20),
+                    suffixIcon: IconButton(
+                      icon: PhosphorIcon(
+                        _obscurePassword ? PhosphorIcons.eye() : PhosphorIcons.eyeSlash(),
+                        size: 20,
+                      ),
+                      onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                    ),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xxl),
-                // Name field
-                CustomTextField(
-                  controller: _nameController,
-                  label: 'Full Name',
-                  hintText: 'Enter your name',
-                  prefixIcon: Icons.person_outline,
-                  validator: Validators.validateName,
-                ),
-                const SizedBox(height: 16),
-                // Email field
-                CustomTextField(
-                  controller: _emailController,
-                  label: AppStrings.email,
-                  hintText: 'Enter your email',
-                  keyboardType: TextInputType.emailAddress,
-                  prefixIcon: Icons.email_outlined,
-                  validator: Validators.validateEmail,
-                ),
-                const SizedBox(height: 16),
-                // Password field
-                CustomTextField(
-                  controller: _passwordController,
-                  label: AppStrings.password,
-                  hintText: 'Create a password',
-                  obscureText: _obscurePassword,
-                  prefixIcon: Icons.lock_outline,
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                      color: AppColors.textSecondary,
-                    ),
-                    onPressed: () {
-                      setState(() => _obscurePassword = !_obscurePassword);
-                    },
-                  ),
-                  validator: Validators.validatePassword,
-                ),
-                const SizedBox(height: 16),
-                // Confirm password field
-                CustomTextField(
-                  controller: _confirmPasswordController,
-                  label: AppStrings.confirmPassword,
-                  hintText: 'Confirm your password',
-                  obscureText: _obscureConfirmPassword,
-                  prefixIcon: Icons.lock_outline,
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
-                      color: AppColors.textSecondary,
-                    ),
-                    onPressed: () {
-                      setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
-                    },
-                  ),
-                  validator: (value) => Validators.validateConfirmPassword(
-                    value,
-                    _passwordController.text,
-                  ),
-                ),
-                const SizedBox(height: 32),
-                // Signup button
+
                 PrimaryButton(
-                  label: AppStrings.signUp,
-                  isLoading: authState.isLoading,
-                  onPressed: _handleSignup,
+                  label: 'Create Account',
+                  onPressed: _signup,
+                  isLoading: _isLoading,
                 ),
-                // Error message
-                if (authState.hasError)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 16),
-                    child: Text(
-                      authState.error.toString(),
-                      style: const TextStyle(color: AppColors.error),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                const SizedBox(height: 24),
-                // Already have account link
+                const SizedBox(height: AppSpacing.xl),
+
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      AppStrings.alreadyHaveAccount,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                    TextButton(
-                      onPressed: () => context.go('/login'),
-                      child: const Text(AppStrings.login),
+                    Text('Already have an account? ', style: AppTypography.bodyMd),
+                    GestureDetector(
+                      onTap: () => context.go('/login'),
+                      child: Text(
+                        'Sign In',
+                        style: AppTypography.bodyMd.copyWith(
+                          color: AppColors.brand,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ],
                 ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_design.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../widgets/cards/modern_card.dart';
 
@@ -47,7 +48,7 @@ class TeachHomeScreen extends ConsumerWidget {
             ),
             
             const SliverToBoxAdapter(
-              child: SizedBox(height: 100),
+              child: SizedBox(height: 160),
             ),
           ],
         ),
@@ -185,19 +186,27 @@ class TeachHomeScreen extends ConsumerWidget {
     
     showModalBottomSheet(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: Column(
+      builder: (context) {
+        final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+        final isKeyboardOpen = bottomInset > 0;
+        
+        return Padding(
+          padding: EdgeInsets.only(bottom: bottomInset),
+          child: Container(
+            padding: EdgeInsets.fromLTRB(
+              24, 
+              24, 
+              24, 
+              24 + (isKeyboardOpen ? 0 : AppSpacing.navbarClearance),
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -281,11 +290,11 @@ class TeachHomeScreen extends ConsumerWidget {
                   child: const Text('Start Teaching'),
                 ),
               ),
-              const SizedBox(height: 12),
             ],
           ),
         ),
-      ),
+      );
+    },
     );
   }
 

@@ -121,6 +121,7 @@ async def save_learning_path(
 async def save_learning_path_test(
     request: Request,
     syllabus: Syllabus,
+    user_id: Optional[str] = None,
 ):
     """TEST ENDPOINT - Save syllabus without auth (for development)"""
     try:
@@ -128,8 +129,9 @@ async def save_learning_path_test(
         firebase = request.app.state.firebase_service
         path_id = str(uuid.uuid4())
         
-        # Use a test user ID for development
-        test_user_id = "test-user-development"
+        # Use provided user_id or fall back to test ID
+        test_user_id = user_id or "test-user-development"
+        print(f"[SAVE-TEST] Using user_id: {test_user_id}")
         
         # Convert Syllabus to LearningPath
         learning_path = LearningPath(

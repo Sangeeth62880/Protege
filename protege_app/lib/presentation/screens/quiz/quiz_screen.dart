@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_design.dart';
+import '../../../core/theme/app_typography.dart';
 import '../../../data/models/quiz_model.dart';
 import '../../../providers/quiz_provider.dart';
 import '../../widgets/buttons/primary_button.dart';
+import '../../widgets/buttons/secondary_button.dart';
 import '../../widgets/quiz/question_card.dart';
 import '../../widgets/quiz/quiz_timer.dart';
 import 'quiz_result_screen.dart';
@@ -18,7 +22,7 @@ class QuizScreen extends ConsumerStatefulWidget {
     super.key,
     this.topic,
     this.lessonTitle,
-    this.lessonId, // Optional, can be null
+    this.lessonId,
   });
 
   @override
@@ -29,14 +33,12 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
   @override
   void initState() {
     super.initState();
-    // Generate quiz on load if not already loaded or if different
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Logic to prevent regeneration if already active could be added here
       ref.read(quizProvider.notifier).generateQuiz(
-        topic: widget.topic ?? "General Knowledge",
-        lessonTitle: widget.lessonTitle ?? "Quick Quiz",
-        keyConcepts: [], // Extract or pass
-        difficulty: "medium", // Default
+        topic: widget.topic ?? 'General Knowledge',
+        lessonTitle: widget.lessonTitle ?? 'Quick Quiz',
+        keyConcepts: [],
+        difficulty: 'medium',
       );
     });
   }
@@ -48,18 +50,11 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        title: Text(
-          widget.lessonTitle ?? 'Quiz',
-          style: const TextStyle(color: AppColors.textPrimary),
-        ),
+        backgroundColor: AppColors.surface,
+        title: Text(widget.lessonTitle ?? 'Quiz', style: AppTypography.headingSm),
         leading: IconButton(
-          icon: const Icon(Icons.close, color: AppColors.textPrimary),
-          onPressed: () {
-             // Confirm exit dialog?
-            context.pop();
-          },
+          icon: PhosphorIcon(PhosphorIcons.x(), size: 22),
+          onPressed: () => context.pop(),
         ),
         actions: [
           if (quizState.currentQuiz != null && quizState.quizResult == null)
@@ -67,30 +62,33 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
               child: Padding(
                 padding: const EdgeInsets.only(right: 16.0),
                 child: QuizTimer(
-                  onTick: (seconds) {
-                    ref.read(quizProvider.notifier).updateTimer(seconds);
-                  },
+                  onTick: (seconds) => ref.read(quizProvider.notifier).updateTimer(seconds),
                 ),
               ),
             ),
         ],
       ),
       body: quizState.isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(color: AppColors.brand),
+                  const SizedBox(height: AppSpacing.lg),
+                  Text('Generating quiz...', style: AppTypography.bodyMd),
+                ],
+              ),
+            )
           : quizState.error != null
-              ? Center(child: Text("Error: ${quizState.error}"))
+              ? Center(child: Text('Error: ${quizState.error}', style: AppTypography.bodyMd))
               : quizState.quizResult != null
                   ? QuizResultScreen(
                       result: quizState.quizResult!,
-                      onReset: () {
-                        ref.read(quizProvider.notifier).reset();
-                        // context.pop() is handled inside result screen if needed, 
-                        // or we can let result screen handle navigation
-                      },
+                      onReset: () => ref.read(quizProvider.notifier).reset(),
                     )
                   : quizState.currentQuiz != null
                       ? _buildQuizContent(context, quizState)
-                      : const Center(child: Text("Preparing your quiz...")),
+                      : Center(child: Text('Preparing your quiz...', style: AppTypography.bodyMd)),
     );
   }
 
@@ -101,16 +99,19 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
 
     return Column(
       children: [
+        // Progress bar
         LinearProgressIndicator(
           value: progress,
-          backgroundColor: AppColors.textLight.withValues(alpha: 0.2),
-          valueColor: const AlwaysStoppedAnimation(AppColors.primary),
+          backgroundColor: AppColors.borderLight,
+          valueColor: const AlwaysStoppedAnimation(AppColors.brand),
+          minHeight: 4,
         ),
         Expanded(
           child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
             child: QuestionCard(
               question: currentQ,
-              userAnswer: state.userAnswers[currentQ.questionNumber]?.toString(), // Mapping question number
+              userAnswer: state.userAnswers[currentQ.questionNumber]?.toString(),
               onAnswerSelected: (answer) {
                 ref.read(quizProvider.notifier).selectAnswer(currentQ.questionNumber, answer);
               },
@@ -125,57 +126,50 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
   Widget _buildBottomBar(BuildContext context, QuizState state, QuizModel quiz) {
     final isLast = state.currentQuestionIndex == quiz.questions.length - 1;
     final hasAnswer = state.userAnswers.containsKey(
-      quiz.questions[state.currentQuestionIndex].questionNumber
+      quiz.questions[state.currentQuestionIndex].questionNumber,
     );
 
     return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -4),
-          ),
-        ],
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        AppSpacing.xl,
+        AppSpacing.xl,
+        AppSpacing.xl + AppSpacing.navbarClearance,
       ),
-      child: Row(
-        children: [
-          if (state.currentQuestionIndex > 0)
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () {
-                  ref.read(quizProvider.notifier).prevQuestion();
-                },
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  side: BorderSide(color: AppColors.textLight.withValues(alpha: 0.5)),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        border: Border(top: BorderSide(color: AppColors.borderLight)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Row(
+          children: [
+            if (state.currentQuestionIndex > 0)
+              Expanded(
+                child: SecondaryButton(
+                  label: 'Previous',
+                  onPressed: () => ref.read(quizProvider.notifier).prevQuestion(),
                 ),
-                child: const Text('Previous', style: TextStyle(color: AppColors.textPrimary)),
+              ),
+            if (state.currentQuestionIndex > 0) const SizedBox(width: AppSpacing.md),
+            Expanded(
+              flex: 2,
+              child: PrimaryButton(
+                label: isLast ? 'Submit Quiz' : 'Next Question',
+                onPressed: hasAnswer
+                    ? () {
+                        if (isLast) {
+                          ref.read(quizProvider.notifier).submitQuiz();
+                        } else {
+                          ref.read(quizProvider.notifier).nextQuestion();
+                        }
+                      }
+                    : null,
               ),
             ),
-          if (state.currentQuestionIndex > 0) const SizedBox(width: 16),
-          Expanded(
-            flex: 2,
-            child: PrimaryButton(
-              label: isLast ? 'Submit Quiz' : 'Next Question',
-              onPressed: hasAnswer
-                  ? () {
-                      if (isLast) {
-                        ref.read(quizProvider.notifier).submitQuiz();
-                      } else {
-                        ref.read(quizProvider.notifier).nextQuestion();
-                      }
-                    }
-                  : null, // Disable if no answer? Or allow skip? Requirements say "Answers questions", usually implies mandatory.
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
-
-  // Result view methods removed as they are moved to QuizResultScreen
 }

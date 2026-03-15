@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_design.dart';
+import '../../../core/theme/app_typography.dart';
 import '../../../data/models/learning_path_model.dart';
 import '../../../data/models/lesson_content_model.dart';
 import '../../../providers/learning_provider.dart';
 import '../../../providers/resource_provider.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../providers/dashboard_provider.dart';
+import '../../../providers/user_provider.dart';
+import '../../widgets/buttons/primary_button.dart';
+import '../../widgets/buttons/secondary_button.dart';
 import 'tabs/learn_tab.dart';
 import 'tabs/videos_tab.dart';
 import 'tabs/articles_tab.dart';
@@ -17,8 +24,8 @@ import 'tabs/more_resources_tab.dart';
 /// Lesson detail screen with structured Tab-based layout
 class LessonScreen extends ConsumerStatefulWidget {
   final String pathId;
-  final int moduleId;  // Module number
-  final int lessonId;  // Lesson number within the module
+  final int moduleId;
+  final int lessonId;
 
   const LessonScreen({
     super.key,
@@ -37,31 +44,28 @@ class _LessonScreenState extends ConsumerState<LessonScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadResourcesIfReady();
-    });
+    _loadResourcesIfReady();
   }
 
   void _loadResourcesIfReady() {
-    final pathAsync = ref.read(learningPathProvider(widget.pathId));
-    pathAsync.whenData((path) {
-      if (path != null) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final pathAsync = ref.read(learningPathProvider(widget.pathId));
+      pathAsync.whenData((path) {
+        if (path == null) return;
         final lesson = _findLesson(path);
         if (lesson != null) {
-          final queries = <String, String>{};
-          if (lesson.searchQueries != null) {
-            queries.addAll(lesson.searchQueries!);
-          } else {
-            queries['youtube'] = '${path.topic} ${lesson.title} tutorial';
-            queries['articles'] = '${path.topic} ${lesson.title} guide explained';
-            queries['github'] = '${path.topic} ${lesson.title} examples code';
-          }
-          ref.read(resourceProvider('${path.topic}_${lesson.title}').notifier).loadResources(
+          final query = '${path.topic}_${lesson.title}';
+          final searchQueries = lesson.searchQueries ?? {
+            'youtube': '${path.topic} ${lesson.title} tutorial',
+            'articles': '${path.topic} ${lesson.title} explained',
+            'github': '${path.topic} ${lesson.title} examples',
+          };
+          ref.read(resourceProvider(query).notifier).loadResources(
             topic: path.topic,
-            searchQueries: queries,
+            searchQueries: searchQueries,
           );
         }
-      }
+      });
     });
   }
 
@@ -83,6 +87,7 @@ class _LessonScreenState extends ConsumerState<LessonScreen> {
     }
   }
 
+  /// Enhanced complete lesson — delegates to learningProgressProvider
   Future<void> _completeLesson(LearningPathModel path, LessonModel lesson) async {
     if (_isCompleting || lesson.isCompleted) return;
     setState(() => _isCompleting = true);
@@ -91,39 +96,20 @@ class _LessonScreenState extends ConsumerState<LessonScreen> {
       final user = ref.read(currentUserProvider);
       final userId = user?.uid ?? '';
 
-      final repo = ref.read(learningRepositoryProvider);
-      await repo.completeLessonViaApi(
-        pathId: widget.pathId,
-        moduleNumber: widget.moduleId,
-        lessonNumber: widget.lessonId,
-        userId: userId,
+      await ref.read(learningProgressProvider.notifier).completeLesson(
+        widget.pathId,
+        widget.lessonId,
+        widget.moduleId,
+        userId,
       );
 
-      // Invalidate the path provider so it refetches with updated completion state
-      ref.invalidate(learningPathProvider(widget.pathId));
-
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.white),
-                const SizedBox(width: 8),
-                Text('${lesson.title} completed! +50 XP'),
-              ],
-            ),
-            backgroundColor: AppColors.success,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        _showCelebrationOverlay(path, lesson);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to mark complete: $e'),
-            backgroundColor: AppColors.error,
-          ),
+          SnackBar(content: Text('Failed to mark complete: $e'), backgroundColor: AppColors.error),
         );
       }
     } finally {
@@ -131,25 +117,80 @@ class _LessonScreenState extends ConsumerState<LessonScreen> {
     }
   }
 
+  _NextLessonInfo? _getNextLesson(LearningPathModel path, LessonModel currentLesson) {
+    bool foundCurrent = false;
+    for (var module in path.modules) {
+      for (var lesson in module.lessons) {
+        if (foundCurrent) {
+          return _NextLessonInfo(module.moduleNumber, lesson.lessonNumber, lesson.title);
+        }
+        if (lesson.lessonNumber == currentLesson.lessonNumber && module.moduleNumber == widget.moduleId) {
+          foundCurrent = true;
+        }
+      }
+    }
+    return null;
+  }
+
+  void _showCelebrationOverlay(LearningPathModel path, LessonModel currentLesson) {
+    final nextLesson = _getNextLesson(path, currentLesson);
+    showModalBottomSheet(
+      context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _LessonCompleteCelebration(
+        xpEarned: 50,
+        nextLessonTitle: nextLesson?.title,
+        onNext: () {
+          Navigator.pop(context); // close sheet
+          if (nextLesson != null) {
+            context.go('/learn/${widget.pathId}/module/${nextLesson.moduleId}/lesson/${nextLesson.lessonId}');
+          } else {
+            context.go('/learn/${widget.pathId}');
+          }
+        },
+        onBackToPath: () {
+          Navigator.pop(context);
+          context.go('/learn/${widget.pathId}');
+        },
+      ),
+    );
+  }
+
+
   @override
   Widget build(BuildContext context) {
     final pathAsync = ref.watch(learningPathProvider(widget.pathId));
 
     return pathAsync.when(
-      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (err, stack) => Scaffold(body: Center(child: Text('Error: $err'))),
+      loading: () => Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(color: AppColors.brand),
+              const SizedBox(height: AppSpacing.lg),
+              Text('Loading lesson...', style: AppTypography.bodyMd),
+            ],
+          ),
+        ),
+      ),
+      error: (err, _) => Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(child: Text('Error: $err', style: AppTypography.bodyMd)),
+      ),
       data: (path) {
-        if (path == null) return const Scaffold(body: Center(child: Text('Path not found')));
-        
+        if (path == null) return Scaffold(backgroundColor: AppColors.background, body: Center(child: Text('Path not found', style: AppTypography.bodyMd)));
+
         final module = _findModule(path);
         final lesson = _findLesson(path);
         if (lesson == null || module == null) {
-          return const Scaffold(body: Center(child: Text('Lesson not found')));
+          return Scaffold(backgroundColor: AppColors.background, body: Center(child: Text('Lesson not found', style: AppTypography.bodyMd)));
         }
 
         final resourceState = ref.watch(resourceProvider('${path.topic}_${lesson.title}'));
-
-        // Build the lesson content params for AI generation
         final contentParams = LessonContentParams(
           pathId: widget.pathId,
           topic: path.topic,
@@ -161,235 +202,290 @@ class _LessonScreenState extends ConsumerState<LessonScreen> {
           moduleNumber: widget.moduleId,
           lessonNumber: widget.lessonId,
         );
-
         final lessonContentAsync = ref.watch(lessonContentProvider(contentParams));
 
-        return DefaultTabController(
-          length: 6,
-          child: Scaffold(
-            appBar: AppBar(
-              title: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    lesson.title,
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  if (path.topic.isNotEmpty)
+
+          final nextLesson = _getNextLesson(path, lesson);
+
+          return DefaultTabController(
+            length: 6,
+            child: Scaffold(
+              backgroundColor: AppColors.background,
+              appBar: AppBar(
+                backgroundColor: AppColors.surface,
+                leading: IconButton(
+                  icon: PhosphorIcon(PhosphorIcons.arrowLeft(), size: 22),
+                  onPressed: () => context.pop(),
+                ),
+                title: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(lesson.title, style: AppTypography.headingSm),
                     Text(
                       '${path.topic} · Module ${module.moduleNumber}',
-                      style: Theme.of(context).textTheme.bodySmall,
+                      style: AppTypography.bodySm,
                     ),
-                ],
-              ),
-              bottom: const TabBar(
-                isScrollable: true,
-                tabAlignment: TabAlignment.start,
-                indicatorColor: AppColors.primary,
-                labelColor: AppColors.primary,
-                unselectedLabelColor: AppColors.textSecondary,
-                tabs: [
-                  Tab(text: 'Learn'),
-                  Tab(text: 'Videos'),
-                  Tab(text: 'Articles'),
-                  Tab(text: 'Practice'),
-                  Tab(text: 'Notes'),
-                  Tab(text: 'More'),
-                ],
-              ),
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.share_outlined),
-                  onPressed: () {},
+                  ],
                 ),
-                PopupMenuButton<String>(
-                  onSelected: (value) {
-                    if (value == 'quiz') {
-                       context.push(
-                        '/quiz/${lesson.id}',
-                        extra: {
+                bottom: TabBar(
+                  isScrollable: true,
+                  tabAlignment: TabAlignment.start,
+                  indicatorColor: AppColors.brand,
+                  labelColor: AppColors.brand,
+                  unselectedLabelColor: AppColors.textTertiary,
+                  labelStyle: AppTypography.headingSm.copyWith(fontSize: 14),
+                  unselectedLabelStyle: AppTypography.bodyMd.copyWith(fontSize: 14),
+                  tabs: const [
+                    Tab(text: 'Learn'),
+                    Tab(text: 'Videos'),
+                    Tab(text: 'Articles'),
+                    Tab(text: 'Practice'),
+                    Tab(text: 'Notes'),
+                    Tab(text: 'More'),
+                  ],
+                ),
+                actions: [
+                  PopupMenuButton<String>(
+                    icon: PhosphorIcon(PhosphorIcons.dotsThreeVertical(), size: 22),
+                    onSelected: (value) {
+                      if (value == 'quiz') {
+                        context.push('/quiz/${lesson.id}', extra: {
                           'topic': path.topic,
                           'lessonTitle': lesson.title,
-                        }
-                      );
-                    } else if (value == 'teach') {
-                       context.push('/teaching/${lesson.id}');
-                    }
-                  },
-                  itemBuilder: (BuildContext context) {
-                    return [
-                      const PopupMenuItem<String>(
+                        });
+                      } else if (value == 'teach') {
+                        context.push('/teaching/${lesson.id}');
+                      }
+                    },
+                    itemBuilder: (_) => [
+                      PopupMenuItem(
                         value: 'quiz',
-                        child: Row(
-                          children: [
-                            Icon(Icons.quiz_outlined, color: AppColors.textPrimary),
-                            SizedBox(width: 8),
-                            Text('Take Quiz'),
-                          ],
-                        ),
+                        child: Row(children: [
+                          PhosphorIcon(PhosphorIcons.exam(), size: 18),
+                          const SizedBox(width: 8),
+                          const Text('Take Quiz'),
+                        ]),
                       ),
-                      const PopupMenuItem<String>(
+                      PopupMenuItem(
                         value: 'teach',
-                        child: Row(
-                          children: [
-                            Icon(Icons.psychology_outlined, color: AppColors.textPrimary),
-                            SizedBox(width: 8),
-                            Text('Teach Mode'),
-                          ],
-                        ),
+                        child: Row(children: [
+                          PhosphorIcon(PhosphorIcons.brain(), size: 18),
+                          const SizedBox(width: 8),
+                          const Text('Teach Mode'),
+                        ]),
                       ),
-                    ];
-                  },
-                ),
-              ],
-            ),
-            body: TabBarView(
-              children: [
-                // Learn Tab — uses AI-generated content
-                lessonContentAsync.when(
-                  loading: () => const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircularProgressIndicator(),
-                        SizedBox(height: 16),
-                        Text('Generating lesson content...'),
-                        SizedBox(height: 8),
-                        Text(
-                          'This may take a moment',
-                          style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
-                        ),
-                      ],
-                    ),
-                  ),
-                  error: (err, _) => Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.error_outline, size: 48, color: AppColors.error),
-                        const SizedBox(height: 16),
-                        Text('Failed to load: $err', textAlign: TextAlign.center),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: () => ref.invalidate(lessonContentProvider(contentParams)),
-                          child: const Text('Retry'),
-                        ),
-                      ],
-                    ),
-                  ),
-                  data: (contentJson) {
-                    final explanation = LessonExplanation.fromJson(contentJson);
-                    return LearnTab(
-                      explanation: explanation,
-                      wikipedia: resourceState.resources?.wikipedia,
-                    );
-                  },
-                ),
-
-                // Videos Tab
-                resourceState.isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : VideosTab(videos: resourceState.resources?.videos ?? []),
-
-                // Articles Tab
-                resourceState.isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : ArticlesTab(articles: resourceState.resources?.articles ?? []),
-
-                // Practice Tab
-                resourceState.isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : PracticeTab(repositories: resourceState.resources?.repositories ?? []),
-
-                // Notes Tab
-                NotesTab(
-                  pathId: widget.pathId,
-                  moduleId: widget.moduleId,
-                  lessonId: widget.lessonId,
-                ),
-
-                // More Resources Tab
-                resourceState.isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : MoreResourcesTab(
-                        books: resourceState.resources?.books ?? [],
-                        questions: resourceState.resources?.questions ?? [],
-                        courses: resourceState.resources?.courses ?? [],
-                        docs: resourceState.resources?.docs ?? [],
-                      ),
-              ],
-            ),
-            bottomNavigationBar: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, -5),
+                    ],
                   ),
                 ],
               ),
-              child: Row(
+              body: TabBarView(
                 children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () {
-                         context.push(
-                          '/quiz/${lesson.id}',
-                          extra: {
+                  // Learn Tab
+                  lessonContentAsync.when(
+                    loading: () => Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(color: AppColors.brand),
+                          const SizedBox(height: AppSpacing.lg),
+                          Text('Generating lesson...', style: AppTypography.bodyMd),
+                          const SizedBox(height: AppSpacing.sm),
+                          Text('This may take a moment', style: AppTypography.bodySm),
+                        ],
+                      ),
+                    ),
+                    error: (err, _) => Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          PhosphorIcon(PhosphorIcons.warning(), size: 48, color: AppColors.error),
+                          const SizedBox(height: AppSpacing.lg),
+                          Text('Failed to load: $err', textAlign: TextAlign.center, style: AppTypography.bodyMd),
+                          const SizedBox(height: AppSpacing.lg),
+                          ElevatedButton(
+                            onPressed: () => ref.invalidate(lessonContentProvider(contentParams)),
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    ),
+                    data: (contentJson) {
+                      final explanation = LessonExplanation.fromJson(contentJson);
+                      return LearnTab(
+                        explanation: explanation,
+                        wikipedia: resourceState.resources?.wikipedia,
+                      );
+                    },
+                  ),
+                  // Videos Tab
+                  resourceState.isLoading
+                      ? Center(child: CircularProgressIndicator(color: AppColors.brand))
+                      : VideosTab(videos: resourceState.resources?.videos ?? []),
+                  // Articles Tab
+                  resourceState.isLoading
+                      ? Center(child: CircularProgressIndicator(color: AppColors.brand))
+                      : ArticlesTab(articles: resourceState.resources?.articles ?? []),
+                  // Practice Tab
+                  resourceState.isLoading
+                      ? Center(child: CircularProgressIndicator(color: AppColors.brand))
+                      : PracticeTab(repositories: resourceState.resources?.repositories ?? []),
+                  // Notes Tab
+                  NotesTab(pathId: widget.pathId, moduleId: widget.moduleId, lessonId: widget.lessonId),
+                  // More Resources Tab
+                  resourceState.isLoading
+                      ? Center(child: CircularProgressIndicator(color: AppColors.brand))
+                      : MoreResourcesTab(
+                          textbooks: resourceState.resources?.textbooks ?? [],
+                          books: resourceState.resources?.books ?? [],
+                          questions: resourceState.resources?.questions ?? [],
+                          courses: resourceState.resources?.courses ?? [],
+                          docs: resourceState.resources?.docs ?? [],
+                        ),
+                ],
+              ),
+              bottomNavigationBar: Container(
+                padding: EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  AppSpacing.lg,
+                  AppSpacing.lg,
+                  AppSpacing.lg + AppSpacing.navbarClearance,
+                ),
+                decoration: const BoxDecoration(
+                  color: AppColors.surface,
+                  border: Border(top: BorderSide(color: AppColors.borderLight)),
+                ),
+                child: SafeArea(
+                  top: false,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: SecondaryButton(
+                          label: 'Take Quiz',
+                          onPressed: () => context.push('/quiz/${lesson.id}', extra: {
                             'topic': path.topic,
                             'lessonTitle': lesson.title,
-                          }
-                        );
-                      },
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        side: const BorderSide(color: AppColors.primary),
-                        foregroundColor: AppColors.primary,
+                          }),
+                        ),
                       ),
-                      child: const Text('Take Quiz'),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: lesson.isCompleted || _isCompleting
-                          ? null
-                          : () => _completeLesson(path, lesson),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: lesson.isCompleted
-                            ? AppColors.success
-                            : AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        elevation: 0,
-                        disabledBackgroundColor: AppColors.success.withValues(alpha: 0.8),
-                        disabledForegroundColor: Colors.white,
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: PrimaryButton(
+                          label: lesson.isCompleted 
+                              ? (nextLesson != null ? 'Next: ${nextLesson.title}' : 'Path Complete') 
+                              : 'Complete Lesson',
+                          onPressed: lesson.isCompleted 
+                              ? () {
+                                  if (nextLesson != null) {
+                                    context.go('/learn/${widget.pathId}/module/${nextLesson.moduleId}/lesson/${nextLesson.lessonId}');
+                                  } else {
+                                    context.go('/learn/${widget.pathId}');
+                                  }
+                                }
+                              : () => _completeLesson(path, lesson),
+                          isLoading: _isCompleting,
+                          isDisabled: false,
+                          icon: lesson.isCompleted ? PhosphorIcons.arrowRight(PhosphorIconsStyle.bold) : null,
+                        ),
                       ),
-                      child: _isCompleting
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : Text(
-                              lesson.isCompleted
-                                  ? '✓ Completed'
-                                  : 'Complete Lesson',
-                            ),
-                    ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      );
+    }
+}
+
+class _NextLessonInfo {
+  final int moduleId;
+  final int lessonId;
+  final String title;
+  _NextLessonInfo(this.moduleId, this.lessonId, this.title);
+}
+
+class _LessonCompleteCelebration extends StatelessWidget {
+  final int xpEarned;
+  final String? nextLessonTitle;
+  final VoidCallback onNext;
+  final VoidCallback onBackToPath;
+
+  const _LessonCompleteCelebration({
+    required this.xpEarned,
+    this.nextLessonTitle,
+    required this.onNext,
+    required this.onBackToPath,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(AppRadius.xxl),
+          topRight: Radius.circular(AppRadius.xxl),
+        ),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 48,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: AppSpacing.xl),
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+              ),
+            ),
+            Center(
+              child: Container(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: PhosphorIcon(
+                  PhosphorIcons.star(PhosphorIconsStyle.fill),
+                  color: AppColors.success,
+                  size: 48,
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            Text(
+              'Lesson Completed!',
+              style: AppTypography.headingMd,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              '+$xpEarned XP earned for your progress',
+              style: AppTypography.bodySm.copyWith(color: AppColors.success, fontWeight: FontWeight.w600),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.xxxl),
+            PrimaryButton(
+              label: nextLessonTitle != null ? 'Next: $nextLessonTitle' : 'Path Complete',
+              onPressed: onNext,
+              icon: nextLessonTitle != null ? PhosphorIcons.arrowRight(PhosphorIconsStyle.bold) : PhosphorIcons.flag(PhosphorIconsStyle.bold),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            SecondaryButton(
+              label: 'Back to Learning Path',
+              onPressed: onBackToPath,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

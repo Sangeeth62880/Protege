@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_design.dart';
 
 class TutorInputField extends StatefulWidget {
   final Function(String) onSubmitted;
@@ -29,7 +30,8 @@ class _TutorInputFieldState extends State<TutorInputField> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16.0),
+      padding: EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 
+        MediaQuery.of(context).viewInsets.bottom > 0 ? 16.0 : 16.0 + AppSpacing.navbarClearance),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [

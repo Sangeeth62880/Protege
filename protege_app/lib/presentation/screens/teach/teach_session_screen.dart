@@ -4,7 +4,13 @@ import 'package:go_router/go_router.dart';
 import 'package:dio/dio.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/api_constants.dart';
+import '../../../core/constants/app_design.dart';
 import '../../../core/theme/app_typography.dart';
+import 'dart:convert';
+import 'package:record/record.dart';
+import 'package:http/http.dart' as http;
+import 'package:audioplayers/audioplayers.dart';
+import 'package:path_provider/path_provider.dart';
 
 /// Teaching session screen - chat interface for Reverse Tutoring
 class TeachSessionScreen extends ConsumerStatefulWidget {
@@ -25,6 +31,7 @@ class _TeachSessionScreenState extends ConsumerState<TeachSessionScreen> {
   final List<_ChatMessage> _messages = [];
   bool _isAiTyping = false;
   int _currentAhaScore = 0;
+  int _accuracyConfidence = 100;
   int _messageCount = 0;
   
   // Backend session tracking
@@ -33,6 +40,13 @@ class _TeachSessionScreenState extends ConsumerState<TeachSessionScreen> {
   
   // Selected persona
   String _selectedPersonaId = 'maya';
+  
+  // Audio state
+  final AudioRecorder _audioRecorder = AudioRecorder();
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  bool _isRecording = false;
+  bool _isPlayingAudio = false;
+  bool _isTranscribing = false;
   
   final Map<String, _Persona> _personas = {
     'maya': _Persona(
@@ -88,6 +102,7 @@ class _TeachSessionScreenState extends ConsumerState<TeachSessionScreen> {
 
     showModalBottomSheet(
       context: context,
+      useRootNavigator: true,
       isDismissible: false,
       enableDrag: false,
       isScrollControlled: true,
@@ -228,6 +243,9 @@ class _TeachSessionScreenState extends ConsumerState<TeachSessionScreen> {
       print('[TEACH] Session started: $_backendSessionId');
       print('[TEACH] Greeting: ${greeting.substring(0, greeting.length.clamp(0, 80))}...');
       
+      final speaker = _getSpeakerForPersona(_selectedPersonaId);
+      await _playAiVoice(greeting, speaker);
+      
       if (mounted) {
         setState(() {
           _isAiTyping = false;
@@ -237,19 +255,25 @@ class _TeachSessionScreenState extends ConsumerState<TeachSessionScreen> {
             timestamp: DateTime.now(),
           ));
         });
+        _scrollToBottom();
       }
     } catch (e) {
       print('[TEACH] API error during start: $e');
       // Fallback to default greeting
+      final fallbackGreeting = _getDefaultGreeting(persona);
+      final speaker = _getSpeakerForPersona(_selectedPersonaId);
+      await _playAiVoice(fallbackGreeting, speaker);
+      
       if (mounted) {
         setState(() {
           _isAiTyping = false;
           _messages.add(_ChatMessage(
             isUser: false,
-            text: _getDefaultGreeting(persona),
+            text: fallbackGreeting,
             timestamp: DateTime.now(),
           ));
         });
+        _scrollToBottom();
       }
     }
   }
@@ -267,6 +291,17 @@ class _TeachSessionScreenState extends ConsumerState<TeachSessionScreen> {
         return "Hey, I've heard about ${widget.topic} but I want to understand it at a deeper level. Can you explain it comprehensively? I might have some follow-up questions about edge cases. 💡";
       default:
         return "Hi! Can you teach me about ${widget.topic}?";
+    }
+  }
+
+  /// Maps persona IDs to specific Sarvam TTS bulbul:v3 voices
+  String _getSpeakerForPersona(String personaId) {
+    switch (personaId) {
+      case 'maya': return 'priya';   // Female child-like
+      case 'jake': return 'aditya';  // Male teen
+      case 'sarah': return 'shreya'; // Female adult
+      case 'alex': return 'shubh';   // Male adult
+      default: return 'aditya';
     }
   }
 
@@ -304,24 +339,49 @@ class _TeachSessionScreenState extends ConsumerState<TeachSessionScreen> {
         final data = response.data as Map<String, dynamic>;
         final aiResponse = data['response'] as String? ?? _getContextualFallback(text);
         final ahaScore = (data['aha_score'] as num?)?.toInt() ?? _currentAhaScore;
+        final accuracyConf = (data['accuracy_confidence'] as num?)?.toInt() ?? _accuracyConfidence;
+        final sessionAutoComplete = data['session_auto_complete'] as bool? ?? false;
+        final misconceptionDetected = data['misconception_detected'] as String?;
+        final misconceptionCanonical = data['misconception_canonical'] as String?;
         
-        print('[TEACH] AI response received. Aha! score: $ahaScore');
+        print('[TEACH] AI response received. Aha! score: $ahaScore, AccConf: $accuracyConf');
+        
+        final speaker = _getSpeakerForPersona(_selectedPersonaId);
+        await _playAiVoice(aiResponse, speaker);
         
         if (mounted) {
           setState(() {
             _isAiTyping = false;
             _currentAhaScore = ahaScore;
+            _accuracyConfidence = accuracyConf;
             
             _messages.add(_ChatMessage(
               isUser: false,
               text: aiResponse,
               timestamp: DateTime.now(),
+              misconceptionDetected: misconceptionDetected,
+              misconceptionCanonical: misconceptionCanonical,
             ));
           });
+          
+          if (misconceptionDetected != null && misconceptionCanonical != null) {
+            _showMisconceptionBottomSheet(misconceptionDetected, misconceptionCanonical);
+          }
+          
+          if (sessionAutoComplete) {
+            // Give the user a moment to read the final message before wrapping up
+            Future.delayed(const Duration(seconds: 4), () {
+              if (mounted) _endSessionAndRoute();
+            });
+          }
         }
       } catch (e) {
         print('[TEACH] API error during respond: $e');
         // Fallback to contextual response
+        final fallbackText = _getContextualFallback(text);
+        final speaker = _getSpeakerForPersona(_selectedPersonaId);
+        await _playAiVoice(fallbackText, speaker);
+        
         if (mounted) {
           setState(() {
             _isAiTyping = false;
@@ -331,7 +391,7 @@ class _TeachSessionScreenState extends ConsumerState<TeachSessionScreen> {
             
             _messages.add(_ChatMessage(
               isUser: false,
-              text: _getContextualFallback(text),
+              text: fallbackText,
               timestamp: DateTime.now(),
             ));
           });
@@ -339,7 +399,12 @@ class _TeachSessionScreenState extends ConsumerState<TeachSessionScreen> {
       }
     } else {
       // No backend session - use offline fallback
+      final fallbackText = _getContextualFallback(text);
+      final speaker = _getSpeakerForPersona(_selectedPersonaId);
+      
       await Future.delayed(const Duration(milliseconds: 1200));
+      await _playAiVoice(fallbackText, speaker);
+      
       if (mounted) {
         setState(() {
           _isAiTyping = false;
@@ -348,7 +413,7 @@ class _TeachSessionScreenState extends ConsumerState<TeachSessionScreen> {
           
           _messages.add(_ChatMessage(
             isUser: false,
-            text: _getContextualFallback(text),
+            text: fallbackText,
             timestamp: DateTime.now(),
           ));
         });
@@ -408,6 +473,105 @@ class _TeachSessionScreenState extends ConsumerState<TeachSessionScreen> {
     }
   }
 
+  void _startRecording() async {
+    try {
+      if (await _audioRecorder.hasPermission()) {
+        if (Theme.of(context).platform == TargetPlatform.android || Theme.of(context).platform == TargetPlatform.iOS) {
+          final dir = await getTemporaryDirectory();
+          final path = '${dir.path}/audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
+          await _audioRecorder.start(
+            const RecordConfig(),
+            path: path,
+          );
+        } else {
+          // Fallback for Web/Desktop where getTemporaryDirectory might fail
+          await _audioRecorder.start(const RecordConfig(), path: '');
+        }
+        setState(() => _isRecording = true);
+      }
+    } catch (e) {
+      print('[TEACH AUDIO] Error starting record: $e');
+    }
+  }
+
+  void _stopRecording() async {
+    try {
+      final path = await _audioRecorder.stop();
+      setState(() => _isRecording = false);
+      if (path != null) {
+        _transcribeAudio(path);
+      }
+    } catch (e) {
+      print('[TEACH AUDIO] Error stopping record: $e');
+    }
+  }
+
+  void _transcribeAudio(String path) async {
+    setState(() => _isTranscribing = true);
+    try {
+      MultipartFile fileToUpload;
+      if (Theme.of(context).platform == TargetPlatform.android || Theme.of(context).platform == TargetPlatform.iOS) {
+        fileToUpload = await MultipartFile.fromFile(path);
+      } else {
+        // Web flow: fetch the blob and extract bytes
+        final response = await http.get(Uri.parse(path));
+        fileToUpload = MultipartFile.fromBytes(
+          response.bodyBytes,
+          filename: 'audio_web_record.webm',
+        );
+      }
+      
+      final formData = FormData.fromMap({
+        'file': fileToUpload,
+      });
+      
+      final response = await _dio.post(
+        '/api/v1/audio/transcribe',
+        data: formData,
+      );
+      final text = response.data['text'] as String?;
+      
+      setState(() => _isTranscribing = false);
+      if (text != null && text.isNotEmpty) {
+        _messageController.text = text;
+        _sendMessage(); // Automatically send
+      }
+    } catch (e) {
+      print('[TEACH AUDIO] Transcription error: $e');
+      setState(() => _isTranscribing = false);
+    }
+  }
+
+  Future<void> _playAiVoice(String text, String speaker) async {
+    if (_isPlayingAudio) {
+      await _audioPlayer.stop();
+    }
+    
+    try {
+      final response = await _dio.post(
+        '/api/v1/audio/tts',
+        data: {'text': text, 'language_code': 'en-IN', 'speaker': speaker},
+      );
+      
+      final base64Audio = response.data['audio_base64'] as String?;
+      if (base64Audio != null && base64Audio.isNotEmpty) {
+        final bytes = base64Decode(base64Audio);
+        setState(() => _isPlayingAudio = true);
+        
+        await _audioPlayer.play(BytesSource(bytes));
+        
+        _audioPlayer.onPlayerComplete.listen((_) {
+          if (mounted) {
+            setState(() => _isPlayingAudio = false);
+          }
+        });
+      }
+    } catch (e) {
+      print('[TEACH AUDIO] TTS error: $e');
+      setState(() => _isPlayingAudio = false);
+    }
+  }
+
   void _scrollToBottom() {
     Future.delayed(const Duration(milliseconds: 100), () {
       if (_scrollController.hasClients) {
@@ -460,10 +624,42 @@ class _TeachSessionScreenState extends ConsumerState<TeachSessionScreen> {
           ],
         ),
         actions: [
+          // Wrap Up button
+          IconButton(
+            icon: const Icon(Icons.outlined_flag_rounded, color: AppColors.textSecondary),
+            tooltip: 'Wrap Up Now',
+            onPressed: () => _showExitDialog(context),
+          ),
+          // Accuracy Confidence Indicator
+          Container(
+            margin: const EdgeInsets.only(right: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: _getAccuracyColor(_accuracyConfidence).withAlpha(26),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.verified_user_rounded,
+                  color: _getAccuracyColor(_accuracyConfidence),
+                  size: 16,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '$_accuracyConfidence%',
+                  style: AppTypography.labelMedium.copyWith(
+                    color: _getAccuracyColor(_accuracyConfidence),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
           // Live Aha! Score
           Container(
             margin: const EdgeInsets.only(right: 16),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
               color: _getScoreColor(_currentAhaScore).withAlpha(26),
               borderRadius: BorderRadius.circular(20),
@@ -473,7 +669,7 @@ class _TeachSessionScreenState extends ConsumerState<TeachSessionScreen> {
                 Icon(
                   Icons.lightbulb_rounded,
                   color: _getScoreColor(_currentAhaScore),
-                  size: 18,
+                  size: 16,
                 ),
                 const SizedBox(width: 4),
                 Text(
@@ -510,7 +706,12 @@ class _TeachSessionScreenState extends ConsumerState<TeachSessionScreen> {
           
           // Input area
           Container(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+            padding: EdgeInsets.fromLTRB(
+              16, 
+              12, 
+              16, 
+              MediaQuery.of(context).viewInsets.bottom > 0 ? 24.0 : 24.0 + AppSpacing.navbarClearance,
+            ),
             decoration: BoxDecoration(
               color: AppColors.surface,
               boxShadow: [
@@ -551,6 +752,36 @@ class _TeachSessionScreenState extends ConsumerState<TeachSessionScreen> {
                   ),
                   const SizedBox(width: 12),
                   GestureDetector(
+                    onLongPressStart: _isTranscribing ? null : (_) => _startRecording(),
+                    onLongPressEnd: _isTranscribing ? null : (_) => _stopRecording(),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: _isRecording ? 54 : 48,
+                      height: _isRecording ? 54 : 48,
+                      decoration: BoxDecoration(
+                        color: _isRecording ? Colors.red.withAlpha(26) : Colors.transparent,
+                        border: Border.all(
+                          color: _isRecording ? Colors.red : AppColors.divider,
+                        ),
+                        shape: BoxShape.circle,
+                      ),
+                      child: _isTranscribing
+                          ? Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(AppColors.textSecondary),
+                              ),
+                            )
+                          : Icon(
+                              _isRecording ? Icons.mic : Icons.mic_none_rounded,
+                              color: _isRecording ? Colors.red : AppColors.textSecondary,
+                              size: _isRecording ? 28 : 24,
+                            ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
                     onTap: _sendMessage,
                     child: Container(
                       width: 48,
@@ -587,15 +818,112 @@ class _TeachSessionScreenState extends ConsumerState<TeachSessionScreen> {
     if (score >= 50) return AppColors.warning;
     return AppColors.textTertiary;
   }
+  
+  Color _getAccuracyColor(int conf) {
+    if (conf >= 90) return AppColors.success;
+    if (conf >= 70) return AppColors.warning;
+    return AppColors.error;
+  }
+
+  void _showMisconceptionBottomSheet(String detected, String canonical) {
+    showModalBottomSheet(
+      context: context,
+      useRootNavigator: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, color: AppColors.error),
+                const SizedBox(width: 8),
+                Text('Misconception Detected', style: AppTypography.titleMedium.copyWith(color: AppColors.error)),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text('You said:', style: AppTypography.labelSmall),
+            const SizedBox(height: 4),
+            Text(detected, style: AppTypography.bodyMedium),
+            const SizedBox(height: 16),
+            Text('Actually:', style: AppTypography.labelSmall.copyWith(color: AppColors.success)),
+            const SizedBox(height: 4),
+            Text(canonical, style: AppTypography.bodyMedium),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                child: const Text('Got it', style: TextStyle(color: Colors.white)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _endSessionAndRoute() async {
+    if (_backendSessionId == null) {
+      if (mounted) context.pop();
+      return;
+    }
+    
+    // Show loading overlay
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+    
+    try {
+      final response = await _dio.post(
+        '/api/v1/teaching-simple/end',
+        data: {'session_id': _backendSessionId!},
+      );
+      
+      if (mounted) {
+        Navigator.pop(context); // Close loading overlay
+        final data = response.data as Map<String, dynamic>? ?? <String, dynamic>{};
+        
+        // Pass local state
+        data['accuracy_confidence'] = _accuracyConfidence;
+        
+        // Extract all misconceptions caught during this session
+        final misconceptions = _messages
+          .where((m) => m.misconceptionDetected != null && m.misconceptionCanonical != null)
+          .map((m) => {
+            'detected': m.misconceptionDetected,
+            'canonical': m.misconceptionCanonical,
+          })
+          .toList();
+          
+        data['misconceptions'] = misconceptions;
+        
+        context.pushReplacement('/teach/session/complete', extra: data);
+      }
+    } catch (e) {
+      print('[TEACH] Error ending session: $e');
+      if (mounted) {
+        Navigator.pop(context); // Close loading overlay
+        context.pop(); // Revert back
+      }
+    }
+  }
 
   /// End session dialog — calls backend for final evaluation
   void _showExitDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('End Session?'),
+        title: const Text('Wrap Up Session?'),
         content: Text(
-          'Your current Aha! score is $_currentAhaScore. Are you sure you want to end this teaching session?',
+          'Your current Aha! score is $_currentAhaScore. Are you sure you want to end this teaching session early?',
         ),
         actions: [
           TextButton(
@@ -607,126 +935,17 @@ class _TeachSessionScreenState extends ConsumerState<TeachSessionScreen> {
               Navigator.pop(dialogContext);
               
               // Call backend to end session and get evaluation
-              if (_backendSessionId != null) {
-                try {
-                  final response = await _dio.post(
-                    '/api/v1/teaching-simple/end',
-                    data: {'session_id': _backendSessionId!},
-                  );
-                  
-                  final data = response.data as Map<String, dynamic>;
-                  final evaluation = data['evaluation'] as Map<String, dynamic>?;
-                  
-                  if (mounted && evaluation != null) {
-                    _showFinalEvaluation(evaluation);
-                    return;
-                  }
-                } catch (e) {
-                  print('[TEACH] Error ending session: $e');
-                }
+              if (mounted) {
+                _endSessionAndRoute();
               }
               
               // If no evaluation available, just pop
               if (mounted) context.pop();
             },
             child: Text(
-              'End Session',
-              style: TextStyle(color: AppColors.error),
+              'Wrap Up Now',
+              style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Show final evaluation results from the AI
-  void _showFinalEvaluation(Map<String, dynamic> evaluation) {
-    final overallScore = (evaluation['overall_score'] as num?)?.toInt() ?? _currentAhaScore;
-    final clarityScore = (evaluation['clarity_score'] as num?)?.toInt() ?? 0;
-    final accuracyScore = (evaluation['accuracy_score'] as num?)?.toInt() ?? 0;
-    final depthScore = (evaluation['depth_score'] as num?)?.toInt() ?? 0;
-    final strengths = (evaluation['strengths'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [];
-    final improvements = (evaluation['improvements'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [];
-    final summary = evaluation['summary'] as String? ?? 'Session completed.';
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.emoji_events_rounded, color: _getScoreColor(overallScore), size: 28),
-            const SizedBox(width: 8),
-            Text('Session Complete!'),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Overall score
-              Center(
-                child: Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: _getScoreColor(overallScore).withAlpha(26),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Text(
-                    '$overallScore',
-                    style: TextStyle(
-                      fontSize: 36,
-                      fontWeight: FontWeight.w800,
-                      color: _getScoreColor(overallScore),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              
-              // Summary
-              Text(summary, style: AppTypography.bodyMedium),
-              const SizedBox(height: 16),
-              
-              // Score breakdown
-              _ScoreBar(label: 'Clarity', score: clarityScore),
-              const SizedBox(height: 8),
-              _ScoreBar(label: 'Accuracy', score: accuracyScore),
-              const SizedBox(height: 8),
-              _ScoreBar(label: 'Depth', score: depthScore),
-              
-              // Strengths
-              if (strengths.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                Text('💪 Strengths:', style: AppTypography.titleSmall),
-                const SizedBox(height: 4),
-                ...strengths.map((s) => Padding(
-                  padding: const EdgeInsets.only(left: 8, top: 2),
-                  child: Text('• $s', style: AppTypography.bodySmall),
-                )),
-              ],
-              
-              // Areas to improve
-              if (improvements.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Text('📈 Areas to Improve:', style: AppTypography.titleSmall),
-                const SizedBox(height: 4),
-                ...improvements.map((i) => Padding(
-                  padding: const EdgeInsets.only(left: 8, top: 2),
-                  child: Text('• $i', style: AppTypography.bodySmall),
-                )),
-              ],
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-              context.pop();
-            },
-            child: const Text('Done'),
           ),
         ],
       ),
@@ -737,6 +956,8 @@ class _TeachSessionScreenState extends ConsumerState<TeachSessionScreen> {
   void dispose() {
     _messageController.dispose();
     _scrollController.dispose();
+    _audioRecorder.dispose();
+    _audioPlayer.dispose();
     _dio.close();
     super.dispose();
   }
@@ -762,11 +983,15 @@ class _ChatMessage {
   final bool isUser;
   final String text;
   final DateTime timestamp;
+  final String? misconceptionDetected;
+  final String? misconceptionCanonical;
 
   const _ChatMessage({
     required this.isUser,
     required this.text,
     required this.timestamp,
+    this.misconceptionDetected,
+    this.misconceptionCanonical,
   });
 }
 

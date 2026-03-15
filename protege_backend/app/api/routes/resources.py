@@ -67,6 +67,7 @@ async def curate_resources(request: LessonResourcesRequest):
         from app.services.wikipedia_service import WikipediaService
         from app.services.free_articles_service import FreeArticlesService
         from app.services.resource_curator import ResourceCurator
+        from app.services.openstax_service import OpenStaxService
         
         # Initialize services using settings
         youtube_key = settings.YOUTUBE_API_KEY
@@ -82,6 +83,7 @@ async def curate_resources(request: LessonResourcesRequest):
         wikipedia = WikipediaService()
         free_articles = FreeArticlesService()
         query_optimizer = QueryOptimizer()
+        openstax = OpenStaxService()
         
         # Create enhanced curator
         curator = ResourceCurator(
@@ -90,7 +92,8 @@ async def curate_resources(request: LessonResourcesRequest):
             devto_service=devto,
             wikipedia_service=wikipedia,
             free_articles_service=free_articles,
-            query_optimizer=query_optimizer
+            query_optimizer=query_optimizer,
+            openstax_service=openstax
         )
         
         # Curate resources

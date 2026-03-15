@@ -124,6 +124,7 @@ class TeachingSession(BaseModel):
     concepts_covered: List[str] = []
     aha_score: int = Field(ge=0, le=100, default=0)
     aha_breakdown: AhaBreakdown = AhaBreakdown()
+    accuracy_confidence: int = Field(ge=0, le=100, default=100)
     messages: List[TeachingMessage] = []
     message_count: int = 0
     started_at: str
@@ -170,6 +171,10 @@ class EvaluateExplanationResponse(BaseModel):
     score: float
     aha_score: float
     aha_breakdown: AhaBreakdown
+    accuracy_confidence: int = Field(default=100)
+    misconception_detected: Optional[str] = None
+    misconception_canonical: Optional[str] = None
+    session_auto_complete: bool = False
     concepts_demonstrated: List[str] = []
     is_complete: bool
     feedback: Optional[str] = None
@@ -182,6 +187,9 @@ class SessionResultsResponse(BaseModel):
     persona_name: str
     final_score: int
     aha_breakdown: AhaBreakdown
+    accuracy_confidence: int = Field(default=100)
+    misconceptions: List[Dict[str, str]] = []
+    next_actions: List[str] = []
     concepts_covered: List[str]
     concepts_missing: List[str] = []
     time_spent_seconds: int

@@ -1,462 +1,255 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_design.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../providers/dashboard_provider.dart';
 import '../../../providers/user_provider.dart';
 import '../../../data/models/dashboard_models.dart';
-import '../../widgets/cards/modern_card.dart';
 import '../../widgets/common/animated_progress_bar.dart';
+import '../../widgets/common/staggered_item.dart';
+import '../../widgets/common/count_up_text.dart';
+import '../../widgets/common/section_header.dart';
+import '../../widgets/common/shimmer_loading.dart';
+import '../../widgets/common/empty_state.dart';
 
-/// Progress screen showing live learning stats, weekly overview, and activity calendar
+/// Progress screen — shows real Firestore data
 class ProgressScreen extends ConsumerWidget {
   const ProgressScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final weeklyStats = ref.watch(weeklyStatsProvider);
+    final pathProgress = ref.watch(pathProgressProvider);
+    final userState = ref.watch(userStreamProvider);
+    final recentActivity = ref.watch(recentActivityProvider);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: RefreshIndicator(
+          color: AppColors.brand,
           onRefresh: () async {
             ref.invalidate(weeklyStatsProvider);
             ref.invalidate(pathProgressProvider);
+            ref.invalidate(recentActivityProvider);
             ref.invalidate(userStreamProvider);
           },
-          child: CustomScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            slivers: [
-              // Header
-              SliverToBoxAdapter(
-                child: _buildHeader(context),
-              ),
-              
-              // Weekly Overview — live
-              SliverToBoxAdapter(
-                child: _buildWeeklyOverview(context, ref),
-              ),
-              
-              // Learning Paths Progress — live
-              SliverToBoxAdapter(
-                child: _buildLearningPaths(context, ref),
-              ),
-              
-              // Activity Calendar — live
-              SliverToBoxAdapter(
-                child: _buildActivityCalendar(context, ref),
-              ),
-              
-              // Detailed Stats — live
-              SliverToBoxAdapter(
-                child: _buildDetailedStats(context, ref),
-              ),
-              
-              const SliverToBoxAdapter(
-                child: SizedBox(height: 100),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Your Progress',
-            style: AppTypography.headlineLarge,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Keep up the great work! 🎉',
-            style: AppTypography.bodyMedium.copyWith(
-              color: AppColors.textSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildWeeklyOverview(BuildContext context, WidgetRef ref) {
-    final weeklyAsync = ref.watch(weeklyStatsProvider);
-
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: ModernCard(
-        margin: EdgeInsets.zero,
-        child: weeklyAsync.when(
-          data: (stats) => _weeklyContent(stats),
-          loading: () => _weeklyContent(WeeklyStats.empty()),
-          error: (_, __) => _weeklyContent(WeeklyStats.empty()),
-        ),
-      ),
-    );
-  }
-
-  Widget _weeklyContent(WeeklyStats stats) {
-    final dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'This Week',
-              style: AppTypography.titleMedium,
-            ),
-            if (stats.totalMinutes > 0)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppColors.success.withAlpha(26),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.trending_up_rounded,
-                      color: AppColors.success,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      stats.totalTimeFormatted,
-                      style: AppTypography.labelMedium.copyWith(
-                        color: AppColors.success,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        ),
-        const SizedBox(height: 20),
-        
-        // Weekly chart — live values
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: List.generate(7, (i) => _DayBar(
-            day: dayLabels[i],
-            value: stats.dayValues[i],
-            isToday: i == stats.todayIndex,
-          )),
-        ),
-        
-        const SizedBox(height: 20),
-        const Divider(),
-        const SizedBox(height: 12),
-        
-        // Stats row — live
-        Row(
-          children: [
-            Expanded(
-              child: _WeekStat(
-                label: 'Time Spent',
-                value: stats.totalTimeFormatted,
-                icon: Icons.timer_outlined,
-              ),
-            ),
-            Expanded(
-              child: _WeekStat(
-                label: 'Lessons',
-                value: '${stats.lessonsCount}',
-                icon: Icons.book_outlined,
-              ),
-            ),
-            Expanded(
-              child: _WeekStat(
-                label: 'XP Earned',
-                value: '${stats.xpEarned}',
-                icon: Icons.star_outline_rounded,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildLearningPaths(BuildContext context, WidgetRef ref) {
-    final pathsAsync = ref.watch(pathProgressProvider);
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Learning Paths',
-            style: AppTypography.titleMedium,
-          ),
-          const SizedBox(height: 12),
-          pathsAsync.when(
-            data: (paths) {
-              if (paths.isEmpty) {
-                return ModernCard(
-                  margin: EdgeInsets.zero,
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Text(
-                        'No learning paths yet. Start exploring!',
-                        style: AppTypography.bodyMedium.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              }
-
-              return Column(
-                children: paths.asMap().entries.map((entry) {
-                  final path = entry.value;
-                  final colors = [AppColors.primary, AppColors.secondary, AppColors.teachMode, AppColors.quizMode, AppColors.accent];
-                  final color = colors[entry.key % colors.length];
-
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _LearningPathProgress(
-                      title: path.title,
-                      progress: path.percentComplete,
-                      lessonsCompleted: path.lessonsCompleted,
-                      totalLessons: path.totalLessons,
-                      color: color,
-                    ),
-                  );
-                }).toList(),
-              );
-            },
-            loading: () => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-            error: (_, __) => const SizedBox.shrink(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActivityCalendar(BuildContext context, WidgetRef ref) {
-    final now = DateTime.now();
-    final monthEvents = ref.watch(monthlyActivityProvider((year: now.year, month: now.month)));
-
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Activity',
-            style: AppTypography.titleMedium,
-          ),
-          const SizedBox(height: 12),
-          
-          ModernCard(
-            margin: EdgeInsets.zero,
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+            padding: AppSpacing.screenH.copyWith(top: 20, bottom: 120),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      DateFormat('MMMM yyyy').format(now),
-                      style: AppTypography.bodyMedium,
-                    ),
-                  ],
+                StaggeredItem(
+                  index: 0,
+                  child: Text('Progress', style: AppTypography.headingLg),
                 ),
-                const SizedBox(height: 12),
-                
-                monthEvents.when(
-                  data: (events) {
-                    // Aggregate events by day
-                    final dayActivity = <int, int>{};
-                    for (final event in events) {
-                      final day = event.timestamp.day;
-                      dayActivity[day] = (dayActivity[day] ?? 0) + 1;
-                    }
+                const SizedBox(height: AppSpacing.xl),
 
-                    final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
-                    // First day of month offset (0=Monday in our grid)
-                    final firstDayWeekday = DateTime(now.year, now.month, 1).weekday; // 1=Mon
-                    final offset = firstDayWeekday - 1;
-
-                    return Column(
+                // ── Top Stats (XP, Streak, Lessons) ──
+                StaggeredItem(
+                  index: 1,
+                  child: userState.when(
+                    data: (user) {
+                      if (user == null) return const SizedBox.shrink();
+                      return Row(
+                        children: [
+                          Expanded(child: _StatCard(icon: PhosphorIcons.lightning(PhosphorIconsStyle.fill), color: AppColors.accentOrange, value: user.totalXp, label: 'Total XP')),
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(child: _StatCard(icon: PhosphorIcons.fire(PhosphorIconsStyle.fill), color: AppColors.error, value: user.currentStreak, label: 'Day Streak')),
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(child: _StatCard(icon: PhosphorIcons.checkCircle(PhosphorIconsStyle.fill), color: AppColors.success, value: user.lessonsCompleted, label: 'Lessons')),
+                        ],
+                      );
+                    },
+                    loading: () => const Row(
                       children: [
-                        // Day headers
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: ['M', 'T', 'W', 'T', 'F', 'S', 'S']
-                              .map((d) => SizedBox(
-                                    width: 32,
-                                    child: Center(
-                                      child: Text(d, style: AppTypography.caption.copyWith(color: AppColors.textTertiary)),
-                                    ),
-                                  ))
-                              .toList(),
-                        ),
-                        const SizedBox(height: 4),
-                        // Calendar grid
-                        GridView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 7,
-                            mainAxisSpacing: 4,
-                            crossAxisSpacing: 4,
-                          ),
-                          itemCount: offset + daysInMonth,
-                          itemBuilder: (context, index) {
-                            if (index < offset) {
-                              return const SizedBox.shrink();
-                            }
-                            final day = index - offset + 1;
-                            final count = dayActivity[day] ?? 0;
-                            final isToday = day == now.day;
-                            
-                            // Activity intensity
-                            int alpha;
-                            if (count == 0) {
-                              alpha = 0;
-                            } else if (count <= 1) {
-                              alpha = 77;
-                            } else if (count <= 3) {
-                              alpha = 140;
-                            } else {
-                              alpha = 220;
-                            }
-
-                            return Container(
-                              decoration: BoxDecoration(
-                                color: count > 0
-                                    ? AppColors.primary.withAlpha(alpha)
-                                    : AppColors.surfaceVariant,
-                                borderRadius: BorderRadius.circular(6),
-                                border: isToday
-                                    ? Border.all(color: AppColors.primary, width: 2)
-                                    : null,
-                              ),
-                              child: Center(
-                                child: Text(
-                                  '$day',
-                                  style: AppTypography.caption.copyWith(
-                                    color: count > 0
-                                        ? AppColors.primary
-                                        : AppColors.textTertiary,
-                                    fontWeight: isToday ? FontWeight.w700 : FontWeight.w400,
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
+                        Expanded(child: ShimmerCard(height: 100)),
+                        SizedBox(width: AppSpacing.md),
+                        Expanded(child: ShimmerCard(height: 100)),
+                        SizedBox(width: AppSpacing.md),
+                        Expanded(child: ShimmerCard(height: 100)),
                       ],
+                    ),
+                    error: (_, __) => const SizedBox.shrink(),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xxl),
+
+                // ── Weekly Stats ──
+                StaggeredItem(
+                  index: 2,
+                  child: weeklyStats.when(
+                    data: (stats) => _WeeklyStatsCard(stats: stats),
+                    loading: () => const ShimmerCard(height: 200),
+                    error: (_, __) => const ShimmerCard(height: 200),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xxxl),
+
+                // ── Path Progress ──
+                StaggeredItem(
+                  index: 3,
+                  child: const SectionHeader(title: 'Learning Paths'),
+                ),
+                pathProgress.when(
+                  data: (paths) {
+                    if (paths.isEmpty) {
+                      return EmptyState(
+                        icon: PhosphorIcons.trendUp(),
+                        title: 'No progress yet',
+                        subtitle: 'Complete lessons to see your progress here',
+                      );
+                    }
+                    return Column(
+                      children: paths.asMap().entries.map((entry) {
+                        return StaggeredItem(
+                          index: 3 + entry.key,
+                          child: _PathProgressCard(summary: entry.value),
+                        );
+                      }).toList(),
                     );
                   },
-                  loading: () => const SizedBox(
-                    height: 200,
-                    child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                  ),
-                  error: (_, __) => const SizedBox(height: 200),
+                  loading: () => const ShimmerCard(height: 100),
+                  error: (_, __) => const SizedBox.shrink(),
                 ),
-                
-                const SizedBox(height: 12),
-                
-                // Legend
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _LegendItem(color: AppColors.surfaceVariant, label: 'No activity'),
-                    const SizedBox(width: 16),
-                    _LegendItem(color: AppColors.primary.withAlpha(77), label: 'Some'),
-                    const SizedBox(width: 16),
-                    _LegendItem(color: AppColors.primary.withAlpha(179), label: 'Good'),
-                    const SizedBox(width: 16),
-                    _LegendItem(color: AppColors.primary, label: 'Great'),
-                  ],
+                const SizedBox(height: AppSpacing.xxxl),
+
+                // ── Recent Activity Timeline ──
+                StaggeredItem(
+                  index: 4 + (pathProgress.valueOrNull?.length ?? 0),
+                  child: const SectionHeader(title: 'Recent Activity'),
                 ),
+                recentActivity.when(
+                  data: (events) {
+                    if (events.isEmpty) {
+                      return EmptyState(
+                        icon: PhosphorIcons.clock(),
+                        title: 'No activity yet',
+                        subtitle: 'Your recent learning events will appear here',
+                      );
+                    }
+                    return Column(
+                      children: events.asMap().entries.map((entry) {
+                        return StaggeredItem(
+                          index: 5 + (pathProgress.valueOrNull?.length ?? 0) + entry.key,
+                          child: _TimelineItem(
+                            event: entry.value,
+                            isLast: entry.key == events.length - 1,
+                          ),
+                        );
+                      }).toList(),
+                    );
+                  },
+                  loading: () => const ShimmerCard(height: 150),
+                  error: (e, _) => Center(child: Text('Error loading activity: $e')),
+                ),
+                const SizedBox(height: AppSpacing.navbarClearance),
               ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
+}
 
-  Widget _buildDetailedStats(BuildContext context, WidgetRef ref) {
-    final userDataAsync = ref.watch(userStreamProvider);
+/// Weekly stats card with bar chart
+class _WeeklyStatsCard extends StatelessWidget {
+  final WeeklyStats stats;
+  const _WeeklyStatsCard({required this.stats});
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+  @override
+  Widget build(BuildContext context) {
+    final dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        boxShadow: AppShadow.sm,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'All Time Stats',
-            style: AppTypography.titleMedium,
-          ),
-          const SizedBox(height: 12),
-          
-          userDataAsync.when(
-            data: (userData) {
-              final totalMinutes = userData?.totalLearningMinutes ?? 0;
-              final hours = totalMinutes ~/ 60;
-              final mins = totalMinutes % 60;
-              final timeStr = hours > 0 ? '${hours}h ${mins}m' : '${mins}m';
+          Text('This Week', style: AppTypography.headingMd),
+          const SizedBox(height: AppSpacing.xl),
 
-              return ModernCard(
-                margin: EdgeInsets.zero,
-                padding: EdgeInsets.zero,
-                child: Column(
-                  children: [
-                    _DetailedStatRow(
-                      icon: Icons.timer_rounded,
-                      label: 'Total Learning Time',
-                      value: timeStr,
-                      color: AppColors.info,
+          // Stats row
+          Row(
+            children: [
+              _MiniStat(
+                icon: PhosphorIcons.bookOpen(PhosphorIconsStyle.fill),
+                color: AppColors.brand,
+                value: '${stats.lessonsCount}',
+                label: 'lessons',
+              ),
+              const SizedBox(width: AppSpacing.xl),
+              _MiniStat(
+                icon: PhosphorIcons.sparkle(PhosphorIconsStyle.fill),
+                color: AppColors.success,
+                value: '${stats.xpEarned}',
+                label: 'XP earned',
+              ),
+              const SizedBox(width: AppSpacing.xl),
+              _MiniStat(
+                icon: PhosphorIcons.clock(PhosphorIconsStyle.fill),
+                color: AppColors.accentOrange,
+                value: '${stats.totalMinutes}',
+                label: 'minutes',
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xxl),
+
+          // Bar chart
+          SizedBox(
+            height: 100,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: stats.dayValues.asMap().entries.map((entry) {
+                final i = entry.key;
+                final value = entry.value;
+                final isToday = i == stats.todayIndex;
+
+                return Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 3),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Expanded(
+                          child: Align(
+                            alignment: Alignment.bottomCenter,
+                            child: AnimatedContainer(
+                              duration: AppMotion.slow,
+                              curve: AppMotion.curveDecelerate,
+                              width: double.infinity,
+                              height: (value * 80).clamp(4.0, 80.0),
+                              decoration: BoxDecoration(
+                                color: isToday ? AppColors.brand : AppColors.brandLight,
+                                borderRadius: BorderRadius.circular(AppRadius.sm),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
+                          dayLabels[i],
+                          style: AppTypography.bodySm.copyWith(
+                            color: isToday ? AppColors.brand : AppColors.textTertiary,
+                            fontWeight: isToday ? FontWeight.w600 : FontWeight.w400,
+                          ),
+                        ),
+                      ],
                     ),
-                    const Divider(height: 1),
-                    _DetailedStatRow(
-                      icon: Icons.check_circle_rounded,
-                      label: 'Lessons Completed',
-                      value: '${userData?.lessonsCompleted ?? 0}',
-                      color: AppColors.success,
-                    ),
-                    const Divider(height: 1),
-                    _DetailedStatRow(
-                      icon: Icons.quiz_rounded,
-                      label: 'Quizzes Passed',
-                      value: '${userData?.quizzesPassed ?? 0}',
-                      color: AppColors.quizMode,
-                    ),
-                    const Divider(height: 1),
-                    _DetailedStatRow(
-                      icon: Icons.psychology_rounded,
-                      label: 'Teaching Sessions',
-                      value: '${userData?.teachSessions ?? 0}',
-                      color: AppColors.teachMode,
-                    ),
-                    const Divider(height: 1),
-                    _DetailedStatRow(
-                      icon: Icons.emoji_events_rounded,
-                      label: 'Achievements Unlocked',
-                      value: '${userData?.badges.length ?? 0}',
-                      color: AppColors.xp,
-                    ),
-                  ],
-                ),
-              );
-            },
-            loading: () => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-            error: (_, __) => const SizedBox.shrink(),
+                  ),
+                );
+              }).toList(),
+            ),
           ),
         ],
       ),
@@ -464,142 +257,70 @@ class ProgressScreen extends ConsumerWidget {
   }
 }
 
-class _DayBar extends StatelessWidget {
-  final String day;
-  final double value;
-  final bool isToday;
-
-  const _DayBar({
-    required this.day,
-    required this.value,
-    required this.isToday,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          width: 32,
-          height: 80,
-          decoration: BoxDecoration(
-            color: AppColors.surfaceVariant,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Stack(
-            alignment: Alignment.bottomCenter,
-            children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 500),
-                width: 32,
-                height: 80 * value,
-                decoration: BoxDecoration(
-                  gradient: isToday 
-                      ? AppColors.primaryGradient 
-                      : LinearGradient(
-                          colors: [
-                            AppColors.primary.withAlpha(179),
-                            AppColors.primary.withAlpha(128),
-                          ],
-                          begin: Alignment.bottomCenter,
-                          end: Alignment.topCenter,
-                        ),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          day,
-          style: AppTypography.labelSmall.copyWith(
-            color: isToday ? AppColors.primary : AppColors.textSecondary,
-            fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _WeekStat extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-
-  const _WeekStat({
-    required this.label,
-    required this.value,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Icon(icon, color: AppColors.textSecondary, size: 20),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: AppTypography.titleMedium.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        Text(
-          label,
-          style: AppTypography.caption,
-        ),
-      ],
-    );
-  }
-}
-
-class _LearningPathProgress extends StatelessWidget {
-  final String title;
-  final double progress;
-  final int lessonsCompleted;
-  final int totalLessons;
+class _MiniStat extends StatelessWidget {
+  final PhosphorIconData icon;
   final Color color;
-
-  const _LearningPathProgress({
-    required this.title,
-    required this.progress,
-    required this.lessonsCompleted,
-    required this.totalLessons,
-    required this.color,
-  });
+  final String value;
+  final String label;
+  const _MiniStat({required this.icon, required this.color, required this.value, required this.label});
 
   @override
   Widget build(BuildContext context) {
-    return ModernCard(
-      margin: EdgeInsets.zero,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        PhosphorIcon(icon, size: 16, color: color),
+        const SizedBox(height: 4),
+        Text(value, style: AppTypography.statSm),
+        Text(label, style: AppTypography.bodySm),
+      ],
+    );
+  }
+}
+
+/// Individual path progress card
+class _PathProgressCard extends StatelessWidget {
+  final PathProgressSummary summary;
+  const _PathProgressCard({required this.summary});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        boxShadow: AppShadow.sm,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
                 child: Text(
-                  title,
-                  style: AppTypography.titleSmall,
+                  summary.title,
+                  style: AppTypography.headingSm,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
               Text(
-                '$lessonsCompleted/$totalLessons',
-                style: AppTypography.labelMedium.copyWith(
-                  color: AppColors.textSecondary,
+                '${(summary.percentComplete * 100).toInt()}%',
+                style: AppTypography.bodySm.copyWith(
+                  color: AppColors.brand,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          AnimatedProgressBar(
-            progress: progress,
-            fillColor: color,
+          const SizedBox(height: AppSpacing.md),
+          AnimatedProgressBar(progress: summary.percentComplete, fillColor: AppColors.brand),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            '${summary.lessonsCompleted}/${summary.totalLessons} lessons completed',
+            style: AppTypography.bodySm,
           ),
         ],
       ),
@@ -607,67 +328,150 @@ class _LearningPathProgress extends StatelessWidget {
   }
 }
 
-class _LegendItem extends StatelessWidget {
-  final Color color;
-  final String label;
-
-  const _LegendItem({required this.color, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(3),
-          ),
-        ),
-        const SizedBox(width: 4),
-        Text(label, style: AppTypography.caption),
-      ],
-    );
-  }
-}
-
-class _DetailedStatRow extends StatelessWidget {
+/// A generic card to show a top-level stat (XP, streak, etc.)
+class _StatCard extends StatelessWidget {
   final IconData icon;
-  final String label;
-  final String value;
   final Color color;
+  final int value;
+  final String label;
 
-  const _DetailedStatRow({
+  const _StatCard({
     required this.icon,
-    required this.label,
-    required this.value,
     required this.color,
+    required this.value,
+    required this.label,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      child: Row(
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg, horizontal: AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        boxShadow: AppShadow.sm,
+      ),
+      child: Column(
         children: [
           Container(
-            width: 40,
-            height: 40,
+            padding: const EdgeInsets.all(AppSpacing.sm),
             decoration: BoxDecoration(
-              color: color.withAlpha(26),
-              borderRadius: BorderRadius.circular(10),
+              color: color.withOpacity(0.1),
+              shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: color, size: 20),
+            child: PhosphorIcon(icon, color: color, size: 24),
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Text(label, style: AppTypography.bodyMedium),
+          const SizedBox(height: AppSpacing.md),
+          CountUpText(
+            end: value,
+            style: AppTypography.headingMd,
           ),
+          const SizedBox(height: AppSpacing.xs),
           Text(
-            value,
-            style: AppTypography.titleMedium.copyWith(
-              fontWeight: FontWeight.w700,
+            label,
+            style: AppTypography.bodySm.copyWith(color: AppColors.textTertiary),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A timeline item to show an activity event
+class _TimelineItem extends StatelessWidget {
+  final ActivityEvent event;
+  final bool isLast;
+
+  const _TimelineItem({required this.event, required this.isLast});
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isLesson = event.type == 'lesson_completed';
+    final bool isPath = event.type == 'path_completed';
+    
+    final icon = isPath ? PhosphorIcons.trophy(PhosphorIconsStyle.fill) 
+               : isLesson ? PhosphorIcons.checkCircle(PhosphorIconsStyle.fill)
+               : PhosphorIcons.bookOpen(PhosphorIconsStyle.fill);
+               
+    final color = isPath ? AppColors.accentOrange : AppColors.brand;
+
+    // Time ago
+    final diff = DateTime.now().difference(event.timestamp);
+    String timeAgo;
+    if (diff.inDays > 0) {
+      timeAgo = '${diff.inDays}d ago';
+    } else if (diff.inHours > 0) {
+      timeAgo = '${diff.inHours}h ago';
+    } else if (diff.inMinutes > 0) {
+      timeAgo = '${diff.inMinutes}m ago';
+    } else {
+      timeAgo = 'Just now';
+    }
+
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Timeline line + icon
+          SizedBox(
+            width: 40,
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: PhosphorIcon(icon, color: color, size: 16),
+                ),
+                if (!isLast)
+                  Expanded(
+                    child: Container(
+                      width: 2,
+                      color: AppColors.border,
+                      margin: const EdgeInsets.symmetric(vertical: 4),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          // Content
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.xl),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        isLesson ? 'Lesson Completed' : (isPath ? 'Path Completed' : 'Activity'),
+                        style: AppTypography.bodySm.copyWith(color: color, fontWeight: FontWeight.w600),
+                      ),
+                      Text(
+                        timeAgo,
+                        style: AppTypography.caption.copyWith(color: AppColors.textTertiary),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    event.title,
+                    style: AppTypography.bodySm.copyWith(fontWeight: FontWeight.w500),
+                  ),
+                  if (event.meta?['xp'] != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      '+${event.meta!['xp']} XP',
+                      style: AppTypography.caption.copyWith(color: AppColors.success, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
         ],

@@ -1,8 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_design.dart';
 import '../../../core/theme/app_typography.dart';
 
-/// Custom bottom navigation bar with modern styling
+/// Bottom navigation bar item data
+class BottomNavItem {
+  final PhosphorIconData icon;
+  final PhosphorIconData selectedIcon;
+  final String label;
+
+  const BottomNavItem({
+    required this.icon,
+    required this.selectedIcon,
+    required this.label,
+  });
+}
+
+/// Premium bottom navigation bar with Phosphor icons
 class BottomNavBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
@@ -18,59 +33,54 @@ class BottomNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: AppColors.surface,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadow,
-            blurRadius: 20,
-            offset: const Offset(0, -5),
-          ),
-        ],
+        border: Border(
+          top: BorderSide(color: AppColors.borderLight, width: 1),
+        ),
       ),
       child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        top: false,
+        child: SizedBox(
+          height: 60,
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: List.generate(items.length, (index) {
               final item = items[index];
-              final isSelected = index == currentIndex;
-              final color = isSelected 
-                  ? (item.highlightColor ?? AppColors.primary) 
-                  : AppColors.textTertiary;
-              
+              final isActive = index == currentIndex;
+
               return Expanded(
                 child: GestureDetector(
-                  onTap: () => onTap(index),
                   behavior: HitTestBehavior.opaque,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: isSelected 
-                          ? (item.highlightColor ?? AppColors.primary).withAlpha(26)
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          isSelected ? item.selectedIcon : item.icon,
-                          color: color,
-                          size: 24,
+                  onTap: () => onTap(index),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      PhosphorIcon(
+                        isActive ? item.selectedIcon : item.icon,
+                        size: 24,
+                        color: isActive ? AppColors.brand : AppColors.textTertiary,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        item.label,
+                        style: AppTypography.bodySm.copyWith(
+                          fontSize: 10,
+                          color: isActive ? AppColors.brand : AppColors.textTertiary,
+                          fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          item.label,
-                          style: AppTypography.labelSmall.copyWith(
-                            color: color,
-                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                          ),
+                      ),
+                      const SizedBox(height: 2),
+                      // Active dot indicator
+                      AnimatedContainer(
+                        duration: AppMotion.normal,
+                        width: isActive ? 4 : 0,
+                        height: isActive ? 4 : 0,
+                        decoration: BoxDecoration(
+                          color: AppColors.brand,
+                          borderRadius: BorderRadius.circular(AppRadius.full),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               );
@@ -80,18 +90,4 @@ class BottomNavBar extends StatelessWidget {
       ),
     );
   }
-}
-
-class BottomNavItem {
-  final IconData icon;
-  final IconData selectedIcon;
-  final String label;
-  final Color? highlightColor;
-
-  const BottomNavItem({
-    required this.icon,
-    required this.selectedIcon,
-    required this.label,
-    this.highlightColor,
-  });
 }

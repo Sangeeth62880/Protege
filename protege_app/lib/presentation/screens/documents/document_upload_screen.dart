@@ -64,7 +64,7 @@ class _DocumentUploadScreenState extends ConsumerState<DocumentUploadScreen> {
         elevation: 0,
       ),
       body: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

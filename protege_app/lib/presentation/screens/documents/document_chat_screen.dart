@@ -139,7 +139,7 @@ class _DocumentChatScreenState extends ConsumerState<DocumentChatScreen> {
 
           // Input bar
           Container(
-            padding: EdgeInsets.fromLTRB(16, 8, 8, 8 + MediaQuery.of(context).viewPadding.bottom),
+            padding: EdgeInsets.fromLTRB(16, 8, 8, 8 + MediaQuery.of(context).viewPadding.bottom + 80),
             decoration: BoxDecoration(
               color: AppColors.surface,
               border: Border(top: BorderSide(color: AppColors.border)),

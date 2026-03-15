@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'package:protege_app/presentation/screens/home/home_screen.dart';
 import 'package:protege_app/presentation/screens/explore/explore_screen.dart';
 import 'package:protege_app/presentation/screens/learning/learning_path_screen.dart';
@@ -12,17 +13,18 @@ import 'package:protege_app/presentation/screens/shell/main_shell.dart';
 import 'package:protege_app/presentation/screens/explore/goal_selection_screen.dart';
 import 'package:protege_app/presentation/screens/explore/syllabus_loading_screen.dart';
 import 'package:protege_app/presentation/screens/explore/syllabus_preview_screen.dart';
-import '../../presentation/screens/tutor/tutor_chat_screen.dart';
-import '../../presentation/screens/lesson/lesson_screen.dart';
-import '../../presentation/screens/quiz/quiz_screen.dart';
-import '../../presentation/screens/teach/teach_home_screen.dart';
-import '../../presentation/screens/teach/teach_session_screen.dart';
-import '../../presentation/screens/progress/progress_screen.dart';
-import '../../presentation/screens/documents/documents_screen.dart';
-import '../../presentation/screens/documents/document_upload_screen.dart';
-import '../../presentation/screens/documents/document_view_screen.dart';
-import '../../presentation/screens/documents/document_chat_screen.dart';
-import '../../providers/auth_provider.dart';
+import 'package:protege_app/presentation/screens/tutor/tutor_chat_screen.dart';
+import 'package:protege_app/presentation/screens/lesson/lesson_screen.dart';
+import 'package:protege_app/presentation/screens/quiz/quiz_screen.dart';
+import 'package:protege_app/presentation/screens/teach/teach_home_screen.dart';
+import 'package:protege_app/presentation/screens/teach/teach_session_screen.dart';
+import 'package:protege_app/presentation/screens/teach/teach_session_complete_screen.dart';
+import 'package:protege_app/presentation/screens/progress/progress_screen.dart';
+import 'package:protege_app/presentation/screens/documents/documents_screen.dart';
+import 'package:protege_app/presentation/screens/documents/document_upload_screen.dart';
+import 'package:protege_app/presentation/screens/documents/document_view_screen.dart';
+import 'package:protege_app/presentation/screens/documents/document_chat_screen.dart';
+import 'package:protege_app/providers/auth_provider.dart';
 
 // Private navigator keys
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -34,7 +36,7 @@ final _shellNavigatorProfileKey = GlobalKey<NavigatorState>(debugLabel: 'shellPr
 
 class AppRouter {
   static final routerProvider = Provider<GoRouter>((ref) {
-    final authState = ref.watch(authStateProvider);
+    final authState = ref.watch(authNotifierProvider);
 
     return GoRouter(
       navigatorKey: _rootNavigatorKey,
@@ -42,7 +44,6 @@ class AppRouter {
       debugLogDiagnostics: true,
       redirect: (context, state) {
         final isLoading = authState.isLoading;
-        // ... rest of redirect logic
         final hasError = authState.hasError;
         final isAuthenticated = authState.valueOrNull != null;
         
@@ -84,7 +85,7 @@ class AppRouter {
         ),
         GoRoute(
           path: '/forgot-password',
-          builder: (context, state) => const Scaffold(body: Center(child: Text("Forgot Password (TODO)"))), // Placeholder
+          builder: (context, state) => const Scaffold(body: Center(child: Text("Forgot Password (TODO)"))),
         ),
 
         // Main App Shell with Bottom Navigation
@@ -93,7 +94,7 @@ class AppRouter {
             return MainShell(navigationShell: navigationShell);
           },
           branches: [
-            // Home Branch
+            // ── HOME BRANCH ──
             StatefulShellBranch(
               navigatorKey: _shellNavigatorHomeKey,
               routes: [
@@ -104,7 +105,7 @@ class AppRouter {
               ],
             ),
             
-            // Explore Branch
+            // ── EXPLORE BRANCH ──
             StatefulShellBranch(
               navigatorKey: _shellNavigatorExploreKey,
               routes: [
@@ -112,21 +113,37 @@ class AppRouter {
                   path: '/explore',
                   builder: (context, state) => const ExploreScreen(),
                 ),
-              ],
-            ),
-            
-            // Teach Branch (Reverse Tutoring)
-            StatefulShellBranch(
-              navigatorKey: _shellNavigatorTeachKey,
-              routes: [
+                // Create Path Flow Routes
                 GoRoute(
-                  path: '/teach',
-                  builder: (context, state) => const TeachHomeScreen(),
+                  path: '/create-path/goals',
+                  builder: (context, state) {
+                    final topic = state.extra as String;
+                    return GoalSelectionScreen(topic: topic);
+                  },
+                ),
+                GoRoute(
+                  path: '/create-path/loading',
+                  builder: (context, state) {
+                    final params = state.extra as Map<String, dynamic>;
+                    return SyllabusLoadingScreen(
+                      topic: params['topic'],
+                      goal: params['goal'],
+                      difficulty: params['difficulty'],
+                      duration: params['duration'],
+                    );
+                  },
+                ),
+                GoRoute(
+                  path: '/create-path/preview',
+                  builder: (context, state) => const SyllabusPreviewScreen(),
                 ),
               ],
             ),
             
-            // Progress Branch
+
+            // ── PROGRESS / LEARN BRANCH ──
+            // Note: Since lessons are accessed from Home, Explore, and Progress,
+            // placing them in the Learn/Progress branch makes the most sense logically.
             StatefulShellBranch(
               navigatorKey: _shellNavigatorLearnKey,
               routes: [
@@ -134,10 +151,95 @@ class AppRouter {
                   path: '/progress',
                   builder: (context, state) => const ProgressScreen(),
                 ),
+                GoRoute(
+                  path: '/learn/:pathId',
+                  builder: (context, state) {
+                    final pathId = state.pathParameters['pathId']!;
+                    return LearningPathScreen(pathId: pathId);
+                  },
+                  routes: [
+                    GoRoute(
+                      path: 'module/:moduleId/lesson/:lessonId',
+                      builder: (context, state) {
+                        final pathId = state.pathParameters['pathId']!;
+                        final moduleId = state.pathParameters['moduleId']!;
+                        final lessonId = state.pathParameters['lessonId']!;
+                        return LessonScreen(
+                          pathId: pathId,
+                          moduleId: int.parse(moduleId),
+                          lessonId: int.parse(lessonId),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+                GoRoute(
+                  path: '/tutor',
+                  builder: (context, state) {
+                    final extras = state.extra as Map<String, dynamic>;
+                    return TutorChatScreen(
+                      topic: extras['topic'] as String,
+                      lessonTitle: extras['lessonTitle'] as String,
+                      keyConcepts: List<String>.from(extras['keyConcepts']),
+                      experienceLevel: extras['experienceLevel'] as String,
+                    );
+                  },
+                ),
+                GoRoute(
+                  path: '/quiz/:lessonId',
+                  builder: (context, state) {
+                    final lessonId = state.pathParameters['lessonId'];
+                    final extra = state.extra as Map<String, dynamic>?;
+                    return QuizScreen(
+                      lessonId: lessonId,
+                      topic: extra?['topic'],
+                      lessonTitle: extra?['lessonTitle'],
+                    );
+                  },
+                ),
+              ],
+            ),
+
+            // ── TEACH BRANCH ──
+            StatefulShellBranch(
+              navigatorKey: _shellNavigatorTeachKey,
+              routes: [
+                GoRoute(
+                  path: '/teach',
+                  builder: (context, state) => const TeachHomeScreen(),
+                ),
+                // Teach Session Route - with topic as query param (for custom topics)
+                GoRoute(
+                  path: '/teach/session',
+                  builder: (context, state) {
+                    final topic = state.uri.queryParameters['topic'] ?? 
+                                  state.extra as String? ?? 
+                                  'General Topic';
+                    return TeachSessionScreen(topic: topic);
+                  },
+                ),
+                // Teach Session Complete Route
+                GoRoute(
+                  path: '/teach/session/complete',
+                  builder: (context, state) {
+                    final results = state.extra as Map<String, dynamic>? ?? <String, dynamic>{};
+                    return TeachSessionCompleteScreen(results: results);
+                  },
+                ),
+                // Teach Session Route - with topicId as path param (for pre-defined topics)
+                GoRoute(
+                  path: '/teach/session/:topicId',
+                  builder: (context, state) {
+                    final topicId = state.pathParameters['topicId'] ?? 'general';
+                    // Convert topicId to readable topic name
+                    final topic = _formatTopicFromId(topicId);
+                    return TeachSessionScreen(topic: topic);
+                  },
+                ),
               ],
             ),
             
-            // Profile Branch
+            // ── PROFILE BRANCH ──
             StatefulShellBranch(
               navigatorKey: _shellNavigatorProfileKey,
               routes: [
@@ -145,129 +247,32 @@ class AppRouter {
                   path: '/profile',
                   builder: (context, state) => const ProfileScreen(),
                 ),
+                // Document Routes
+                GoRoute(
+                  path: '/documents',
+                  builder: (context, state) => const DocumentsScreen(),
+                ),
+                GoRoute(
+                  path: '/documents/upload',
+                  builder: (context, state) => const DocumentUploadScreen(),
+                ),
+                GoRoute(
+                  path: '/documents/:docId',
+                  builder: (context, state) {
+                    final docId = state.pathParameters['docId']!;
+                    return DocumentViewScreen(documentId: docId);
+                  },
+                ),
+                GoRoute(
+                  path: '/documents/:docId/chat',
+                  builder: (context, state) {
+                    final docId = state.pathParameters['docId']!;
+                    return DocumentChatScreen(documentId: docId);
+                  },
+                ),
               ],
             ),
           ],
-        ),
-        
-        // Create Path Flow Routes
-        GoRoute(
-          path: '/create-path/goals',
-          builder: (context, state) {
-            final topic = state.extra as String;
-            return GoalSelectionScreen(topic: topic);
-          },
-        ),
-        GoRoute(
-          path: '/create-path/loading',
-          builder: (context, state) {
-            final params = state.extra as Map<String, dynamic>;
-            return SyllabusLoadingScreen(
-              topic: params['topic'],
-              goal: params['goal'],
-              difficulty: params['difficulty'],
-              duration: params['duration'],
-            );
-          },
-        ),
-        GoRoute(
-          path: '/create-path/preview',
-          builder: (context, state) => const SyllabusPreviewScreen(),
-        ),
-
-        // Individual Routes (Push on top of shell)
-        GoRoute(
-          path: '/tutor',
-          builder: (context, state) {
-            final extras = state.extra as Map<String, dynamic>;
-            return TutorChatScreen(
-              topic: extras['topic'] as String,
-              lessonTitle: extras['lessonTitle'] as String,
-              keyConcepts: List<String>.from(extras['keyConcepts']),
-              experienceLevel: extras['experienceLevel'] as String,
-            );
-          },
-        ),
-        GoRoute(
-          path: '/learn/:pathId',
-          builder: (context, state) {
-            final pathId = state.pathParameters['pathId']!;
-            return LearningPathScreen(learningPathId: pathId);
-          },
-          routes: [
-            GoRoute(
-              path: 'module/:moduleId/lesson/:lessonId',
-              builder: (context, state) {
-                final pathId = state.pathParameters['pathId']!;
-                final moduleId = state.pathParameters['moduleId']!;
-                final lessonId = state.pathParameters['lessonId']!;
-                return LessonScreen(
-                  pathId: pathId,
-                  moduleId: int.parse(moduleId),
-                  lessonId: int.parse(lessonId),
-                );
-              },
-            ),
-          ],
-        ),
-
-        GoRoute(
-          path: '/quiz/:lessonId',
-          builder: (context, state) {
-            final lessonId = state.pathParameters['lessonId'];
-            final extra = state.extra as Map<String, dynamic>?;
-            return QuizScreen(
-              lessonId: lessonId,
-              topic: extra?['topic'],
-              lessonTitle: extra?['lessonTitle'],
-            );
-          },
-        ),
-        
-        // Teach Session Route - with topic as query param (for custom topics)
-        GoRoute(
-          path: '/teach/session',
-          builder: (context, state) {
-            final topic = state.uri.queryParameters['topic'] ?? 
-                          state.extra as String? ?? 
-                          'General Topic';
-            return TeachSessionScreen(topic: topic);
-          },
-        ),
-        
-        // Teach Session Route - with topicId as path param (for pre-defined topics)
-        GoRoute(
-          path: '/teach/session/:topicId',
-          builder: (context, state) {
-            final topicId = state.pathParameters['topicId'] ?? 'general';
-            // Convert topicId to readable topic name
-            final topic = _formatTopicFromId(topicId);
-            return TeachSessionScreen(topic: topic);
-          },
-        ),
-
-        // Document Routes
-        GoRoute(
-          path: '/documents',
-          builder: (context, state) => const DocumentsScreen(),
-        ),
-        GoRoute(
-          path: '/documents/upload',
-          builder: (context, state) => const DocumentUploadScreen(),
-        ),
-        GoRoute(
-          path: '/documents/:docId',
-          builder: (context, state) {
-            final docId = state.pathParameters['docId']!;
-            return DocumentViewScreen(documentId: docId);
-          },
-        ),
-        GoRoute(
-          path: '/documents/:docId/chat',
-          builder: (context, state) {
-            final docId = state.pathParameters['docId']!;
-            return DocumentChatScreen(documentId: docId);
-          },
         ),
       ],
     );

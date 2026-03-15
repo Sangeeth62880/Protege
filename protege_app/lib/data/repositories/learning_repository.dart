@@ -65,8 +65,10 @@ class LearningRepository {
         'capstone_project': syllabus.capstoneProject?.toJson(),
       };
 
+      final userId = _firebaseService.currentUser?.uid ?? '';
+
       final response = await _apiService.post<Map<String, dynamic>>(
-         ApiConstants.savePathTest, // TEMPORARY DEBUG: Bypass Auth
+         '${ApiConstants.savePathTest}?user_id=$userId', // Pass real user ID
          data: data,
       );
       
@@ -95,42 +97,81 @@ class LearningRepository {
 
   /// Get learning paths for a user
   Future<List<LearningPathModel>> getUserLearningPaths(String userId) async {
-    try {
-      // Backend Endpoint for paths
-      // Note: Using Backend API instead of direct Firestore is better if we want to abstract it
-      // But Phase 1 used direct Firestore?
-      // The current file code uses `_firebaseService.queryCollection`.
-      // I will stick to Firebase Service if that's the Phase 1 pattern, 
-      // BUT `LearningPathModel.fromJson` now expects snake_case from backend or camelCase?
-      // My refactored Model handles both! Safe.
-      
-      final snapshot = await _firebaseService.queryCollection(
-        'learning_paths',
-        filters: [
-          QueryFilter(field: 'user_id', isEqualTo: userId), // Backend saves as user_id (snake)
-        ],
-        orderBy: 'created_at',
-        descending: true,
-      );
-      
-      return snapshot.docs
-          .map((doc) => LearningPathModel.fromJson(doc.data()))
-          .toList();
-    } catch (e) {
-      // Fallback: try querying 'userId' (camelCase) if schema mixed
-       try {
-        final snapshot = await _firebaseService.queryCollection(
-          'learning_paths',
-          filters: [QueryFilter(field: 'userId', isEqualTo: userId)],
-          orderBy: 'createdAt',
-          descending: true,
-        );
-        return snapshot.docs.map((doc) => LearningPathModel.fromJson(doc.data())).toList();
-      } catch (e2) {
-        AppLogger.error('Failed to get learning paths', tag: 'LearningRepo', error: e);
-        rethrow;
+    print('[DEBUG_PATHS] getUserLearningPaths called with userId: $userId');
+    
+    var allPaths = <LearningPathModel>[];
+    final seenIds = <String>{};
+    
+    // Helper to add paths without duplicates
+    void addPaths(List<LearningPathModel> paths) {
+      for (final p in paths) {
+        if (seenIds.add(p.id)) {
+          allPaths.add(p);
+        }
       }
     }
+
+    // Try querying with 'user_id' (snake_case) — NO orderBy to avoid composite index
+    try {
+      final snapshot = await _firebaseService.queryCollection(
+        'learning_paths',
+        filters: [QueryFilter(field: 'user_id', isEqualTo: userId)],
+      );
+      print('[DEBUG_PATHS] user_id query returned ${snapshot.docs.length} docs');
+      addPaths(snapshot.docs.map((doc) => LearningPathModel.fromJson(doc.data())).toList());
+    } catch (e) {
+      print('[DEBUG_PATHS] user_id query failed: $e');
+    }
+
+    // Also try 'userId' (camelCase) in case of mixed schemas
+    try {
+      final snapshot = await _firebaseService.queryCollection(
+        'learning_paths',
+        filters: [QueryFilter(field: 'userId', isEqualTo: userId)],
+      );
+      print('[DEBUG_PATHS] userId query returned ${snapshot.docs.length} docs');
+      addPaths(snapshot.docs.map((doc) => LearningPathModel.fromJson(doc.data())).toList());
+    } catch (e) {
+      print('[DEBUG_PATHS] userId query failed: $e');
+    }
+
+    // Also fetch legacy paths saved under test-user-development
+    if (userId != 'test-user-development') {
+      try {
+        final snapshot = await _firebaseService.queryCollection(
+          'learning_paths',
+          filters: [QueryFilter(field: 'user_id', isEqualTo: 'test-user-development')],
+        );
+        print('[DEBUG_PATHS] Legacy query returned ${snapshot.docs.length} docs');
+        addPaths(snapshot.docs.map((doc) => LearningPathModel.fromJson(doc.data())).toList());
+      } catch (e) {
+        print('[DEBUG_PATHS] Legacy query failed: $e');
+      }
+    }
+
+    // Debug: if still empty, try unfiltered to see if any paths exist at all
+    if (allPaths.isEmpty) {
+      try {
+        final allSnapshot = await _firebaseService.collection('learning_paths').limit(5).get();
+        print('[DEBUG_PATHS] UNFILTERED query found ${allSnapshot.docs.length} docs:');
+        for (final doc in allSnapshot.docs) {
+          final data = doc.data();
+          print('[DEBUG_PATHS]   id=${doc.id}, user_id=${data['user_id']}, userId=${data['userId']}, topic=${data['topic']}');
+        }
+      } catch (e) {
+        print('[DEBUG_PATHS] Unfiltered query failed: $e');
+      }
+    }
+
+    // Sort by created_at descending (client-side, avoids composite index)
+    allPaths.sort((a, b) {
+      final aTime = a.updatedAt ?? a.createdAt;
+      final bTime = b.updatedAt ?? b.createdAt;
+      return bTime.compareTo(aTime);
+    });
+
+    print('[DEBUG_PATHS] Returning ${allPaths.length} paths total');
+    return allPaths;
   }
 
   /// Get a specific learning path
@@ -189,7 +230,7 @@ class LearningRepository {
   }
 
   /// Mark a lesson as complete
-  Future<void> completeLesson(String pathId, int lessonNumber, int moduleNumber) async {
+  Future<LearningPathModel?> completeLesson(String pathId, int lessonNumber, int moduleNumber) async {
     // Note: With Nested Modules, finding the lesson is harder.
     // We need to read, update in memory, and write back.
     try {
@@ -224,13 +265,24 @@ class LearningRepository {
          final completedCount = allLessons.where((l) => l.isCompleted).length;
          final progress = allLessons.isNotEmpty ? completedCount / allLessons.length : 0.0;
          
+         final updatedAt = DateTime.now();
+         final isCompleted = progress >= 1.0;
+
          await _firebaseService.updateDoc('learning_paths/$pathId', {
            'modules': updatedModules.map((m) => m.toJson()).toList(),
            'progress': progress,
-           'updated_at': DateTime.now(),
-           'is_completed': progress >= 1.0,
+           'updated_at': updatedAt,
+           'is_completed': isCompleted,
          });
+
+         return path.copyWith(
+           modules: updatedModules,
+           progress: progress,
+           updatedAt: updatedAt,
+           isCompleted: isCompleted,
+         );
        }
+       return null;
     } catch (e) {
       AppLogger.error('Failed to complete lesson', tag: 'LearningRepo', error: e);
       rethrow;

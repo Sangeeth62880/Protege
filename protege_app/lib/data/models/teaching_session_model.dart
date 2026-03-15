@@ -39,6 +39,8 @@ class TeachingSessionModel {
   final List<TeachingMessageModel> messages;
   final double ahaMeterScore; // 0.0 to 100.0
   final AhaBreakdown ahaBreakdown;
+  final double accuracyConfidence; // 0.0 to 100.0
+  final bool sessionAutoComplete;
   final List<String> conceptsToCover;
   final List<String> conceptsCovered;
   final TeachingStatus status;
@@ -55,6 +57,8 @@ class TeachingSessionModel {
     this.messages = const [],
     this.ahaMeterScore = 0.0,
     this.ahaBreakdown = const AhaBreakdown(),
+    this.accuracyConfidence = 100.0,
+    this.sessionAutoComplete = false,
     this.conceptsToCover = const [],
     this.conceptsCovered = const [],
     this.status = TeachingStatus.inProgress,
@@ -83,6 +87,12 @@ class TeachingSessionModel {
       ahaBreakdown: json['aha_breakdown'] != null
           ? AhaBreakdown.fromJson(json['aha_breakdown'] as Map<String, dynamic>)
           : const AhaBreakdown(),
+      accuracyConfidence: (json['accuracyConfidence'] as num?)?.toDouble() ??
+          (json['accuracy_confidence'] as num?)?.toDouble() ??
+          100.0,
+      sessionAutoComplete: json['sessionAutoComplete'] as bool? ??
+          json['session_auto_complete'] as bool? ??
+          false,
       conceptsToCover: (json['concepts_to_cover'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
@@ -119,6 +129,8 @@ class TeachingSessionModel {
       'messages': messages.map((e) => e.toJson()).toList(),
       'ahaMeterScore': ahaMeterScore,
       'aha_breakdown': ahaBreakdown.toJson(),
+      'accuracy_confidence': accuracyConfidence,
+      'session_auto_complete': sessionAutoComplete,
       'concepts_to_cover': conceptsToCover,
       'concepts_covered': conceptsCovered,
       'status': status.name,
@@ -137,6 +149,8 @@ class TeachingSessionModel {
     List<TeachingMessageModel>? messages,
     double? ahaMeterScore,
     AhaBreakdown? ahaBreakdown,
+    double? accuracyConfidence,
+    bool? sessionAutoComplete,
     List<String>? conceptsToCover,
     List<String>? conceptsCovered,
     TeachingStatus? status,
@@ -153,6 +167,8 @@ class TeachingSessionModel {
       messages: messages ?? this.messages,
       ahaMeterScore: ahaMeterScore ?? this.ahaMeterScore,
       ahaBreakdown: ahaBreakdown ?? this.ahaBreakdown,
+      accuracyConfidence: accuracyConfidence ?? this.accuracyConfidence,
+      sessionAutoComplete: sessionAutoComplete ?? this.sessionAutoComplete,
       conceptsToCover: conceptsToCover ?? this.conceptsToCover,
       conceptsCovered: conceptsCovered ?? this.conceptsCovered,
       status: status ?? this.status,
@@ -255,6 +271,9 @@ class TeachingResultsModel {
   final String personaName;
   final int finalScore;
   final AhaBreakdown ahaBreakdown;
+  final double accuracyConfidence;
+  final List<Map<String, String>> misconceptions;
+  final List<String> nextActions;
   final List<String> conceptsCovered;
   final List<String> conceptsMissing;
   final int timeSpentSeconds;
@@ -269,6 +288,9 @@ class TeachingResultsModel {
     required this.personaName,
     required this.finalScore,
     required this.ahaBreakdown,
+    this.accuracyConfidence = 100.0,
+    this.misconceptions = const [],
+    this.nextActions = const [],
     this.conceptsCovered = const [],
     this.conceptsMissing = const [],
     this.timeSpentSeconds = 0,
@@ -286,6 +308,15 @@ class TeachingResultsModel {
       finalScore: (json['final_score'] as num).toInt(),
       ahaBreakdown: AhaBreakdown.fromJson(
           json['aha_breakdown'] as Map<String, dynamic>),
+      accuracyConfidence: (json['accuracy_confidence'] as num?)?.toDouble() ?? 100.0,
+      misconceptions: (json['misconceptions'] as List<dynamic>?)
+              ?.map((e) => Map<String, String>.from(e as Map))
+              .toList() ??
+          [],
+      nextActions: (json['next_actions'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          [],
       conceptsCovered: (json['concepts_covered'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??

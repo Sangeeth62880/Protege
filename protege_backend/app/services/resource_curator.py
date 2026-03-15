@@ -15,6 +15,7 @@ from app.services.openlibrary_service import OpenLibraryService
 from app.services.stackoverflow_service import StackOverflowService
 from app.services.coursera_service import CourseraService
 from app.services.mdn_service import MDNService
+from app.services.openstax_service import OpenStaxService
 
 class ResourceCurator:
     """
@@ -34,6 +35,7 @@ class ResourceCurator:
         stackoverflow_service: Optional[StackOverflowService] = None,
         coursera_service: Optional[CourseraService] = None,
         mdn_service: Optional[MDNService] = None,
+        openstax_service: Optional[OpenStaxService] = None,
     ):
         self.youtube = youtube_service
         self.github = github_service
@@ -46,6 +48,7 @@ class ResourceCurator:
         self.stackoverflow = stackoverflow_service
         self.coursera = coursera_service
         self.mdn = mdn_service
+        self.openstax = openstax_service
         
         print("[CURATOR] Enhanced resource curator initialized")
     
@@ -175,6 +178,18 @@ class ResourceCurator:
                 "openlibrary"
             ))
             task_names.append("openlibrary")
+            
+        # OpenStax (textbooks)
+        if self.openstax:
+            tasks.append(self._safe_search(
+                self.openstax.search_textbooks(
+                    topic=topic,
+                    lesson_title=lesson_title,
+                    max_results=3
+                ),
+                "openstax"
+            ))
+            task_names.append("openstax")
         
         # Stack Overflow (Q&A)
         if self.stackoverflow:
@@ -212,6 +227,7 @@ class ResourceCurator:
         articles = []
         repos = []
         books = []
+        textbooks = []
         questions = []
         courses = []
         docs = []
@@ -250,6 +266,10 @@ class ResourceCurator:
             elif name == "openlibrary" and result:
                 books = result
                 print(f"[CURATOR] Open Library: {len(result)} books")
+                
+            elif name == "openstax" and result:
+                textbooks = result
+                print(f"[CURATOR] OpenStax: {len(result)} textbooks")
             
             elif name == "stackoverflow" and result:
                 questions = result
@@ -280,7 +300,7 @@ class ResourceCurator:
         articles = self._rank_by_score(articles, "relevance_score")[:max_articles]
         
         # Step 7: Build response
-        total = len(videos) + len(articles) + len(repos) + len(books) + len(questions) + len(courses) + len(docs) + (1 if wikipedia_summary else 0)
+        total = len(videos) + len(articles) + len(repos) + len(books) + len(textbooks) + len(questions) + len(courses) + len(docs) + (1 if wikipedia_summary else 0)
         curated = {
             "lesson_title": lesson_title,
             "topic": topic,
@@ -289,6 +309,7 @@ class ResourceCurator:
             "repositories": repos,
             "wikipedia": wikipedia_summary,
             "books": books,
+            "textbooks": textbooks,
             "questions": questions,
             "courses": courses,
             "docs": docs,
@@ -303,6 +324,7 @@ class ResourceCurator:
         print(f"[CURATOR] Articles: {len(articles)}")
         print(f"[CURATOR] Repos: {len(repos)}")
         print(f"[CURATOR] Books: {len(books)}")
+        print(f"[CURATOR] Textbooks: {len(textbooks)}")
         print(f"[CURATOR] Q&A: {len(questions)}")
         print(f"[CURATOR] Courses: {len(courses)}")
         print(f"[CURATOR] Docs: {len(docs)}")

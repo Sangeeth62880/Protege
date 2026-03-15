@@ -3,204 +3,118 @@ import 'package:google_fonts/google_fonts.dart';
 import '../constants/app_colors.dart';
 
 /// Protégé Design System — Typography
-/// Primary: Inter, Display: Plus Jakarta Sans, Code: JetBrains Mono
 class AppTypography {
   AppTypography._();
 
-  // ─── Display (Splash, celebrations, hero moments) ─────────────────────
-  static TextStyle get displayLarge => GoogleFonts.plusJakartaSans(
-        fontSize: 48,
-        fontWeight: FontWeight.w800,
-        letterSpacing: -1.5,
-        color: AppColors.textPrimary,
-      );
+  // ── Display (splash, celebrations, hero headings) ──
+  static TextStyle get displayLg => GoogleFonts.plusJakartaSans(
+    fontSize: 40, fontWeight: FontWeight.w800,
+    letterSpacing: -1.2, color: AppColors.textPrimary, height: 1.1,
+  );
+  static TextStyle get displayMd => GoogleFonts.plusJakartaSans(
+    fontSize: 32, fontWeight: FontWeight.w700,
+    letterSpacing: -0.8, color: AppColors.textPrimary, height: 1.15,
+  );
+  static TextStyle get displaySm => GoogleFonts.plusJakartaSans(
+    fontSize: 24, fontWeight: FontWeight.w700,
+    letterSpacing: -0.5, color: AppColors.textPrimary, height: 1.2,
+  );
 
-  static TextStyle get displayMedium => GoogleFonts.plusJakartaSans(
-        fontSize: 36,
-        fontWeight: FontWeight.w700,
-        letterSpacing: -1.0,
-        color: AppColors.textPrimary,
-      );
+  // ── Headings ──
+  static TextStyle get headingLg => GoogleFonts.inter(
+    fontSize: 22, fontWeight: FontWeight.w700,
+    letterSpacing: -0.3, color: AppColors.textPrimary, height: 1.25,
+  );
+  static TextStyle get headingMd => GoogleFonts.inter(
+    fontSize: 18, fontWeight: FontWeight.w600,
+    letterSpacing: -0.2, color: AppColors.textPrimary, height: 1.3,
+  );
+  static TextStyle get headingSm => GoogleFonts.inter(
+    fontSize: 16, fontWeight: FontWeight.w600,
+    color: AppColors.textPrimary, height: 1.35,
+  );
 
-  static TextStyle get displaySmall => GoogleFonts.plusJakartaSans(
-        fontSize: 28,
-        fontWeight: FontWeight.w700,
-        letterSpacing: -0.5,
-        color: AppColors.textPrimary,
-      );
+  // ── Labels ──
+  static TextStyle get labelLg => GoogleFonts.inter(
+    fontSize: 13, fontWeight: FontWeight.w700,
+    letterSpacing: 0.8, color: AppColors.textSecondary,
+  );
+  static TextStyle get labelSm => GoogleFonts.inter(
+    fontSize: 11, fontWeight: FontWeight.w600,
+    letterSpacing: 1.0, color: AppColors.textTertiary,
+  );
 
-  // ─── Headings ─────────────────────────────────────────────────────────
-  static TextStyle get headlineLarge => GoogleFonts.inter(
-        fontSize: 24,
-        fontWeight: FontWeight.w700,
-        letterSpacing: -0.3,
-        color: AppColors.textPrimary,
-      );
+  // ── Body ──
+  static TextStyle get bodyLg => GoogleFonts.inter(
+    fontSize: 16, fontWeight: FontWeight.w400,
+    height: 1.6, color: AppColors.textSecondary,
+  );
+  static TextStyle get bodyMd => GoogleFonts.inter(
+    fontSize: 14, fontWeight: FontWeight.w400,
+    height: 1.55, color: AppColors.textSecondary,
+  );
+  static TextStyle get bodySm => GoogleFonts.inter(
+    fontSize: 12, fontWeight: FontWeight.w400,
+    height: 1.5, color: AppColors.textTertiary,
+  );
 
-  static TextStyle get headlineMedium => GoogleFonts.inter(
-        fontSize: 20,
-        fontWeight: FontWeight.w700,
-        letterSpacing: -0.2,
-        color: AppColors.textPrimary,
-      );
+  // ── Buttons ──
+  static TextStyle get btnLg => GoogleFonts.inter(
+    fontSize: 16, fontWeight: FontWeight.w600, letterSpacing: 0.2,
+  );
+  static TextStyle get btnMd => GoogleFonts.inter(
+    fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 0.2,
+  );
 
-  static TextStyle get headlineSmall => GoogleFonts.inter(
-        fontSize: 18,
-        fontWeight: FontWeight.w600,
-        letterSpacing: 0,
-        color: AppColors.textPrimary,
-      );
+  // ── Stats / Numbers ──
+  static TextStyle get statLg => GoogleFonts.plusJakartaSans(
+    fontSize: 36, fontWeight: FontWeight.w800,
+    letterSpacing: -0.5, color: AppColors.textPrimary,
+  );
+  static TextStyle get statMd => GoogleFonts.plusJakartaSans(
+    fontSize: 24, fontWeight: FontWeight.w700,
+    letterSpacing: -0.3, color: AppColors.textPrimary,
+  );
+  static TextStyle get statSm => GoogleFonts.plusJakartaSans(
+    fontSize: 18, fontWeight: FontWeight.w700,
+    color: AppColors.textPrimary,
+  );
 
-  // ─── Title (legacy — same family as headings) ─────────────────────────
-  static TextStyle get titleLarge => headlineSmall;
+  // ── Code ──
+  static TextStyle get code => GoogleFonts.jetBrainsMono(
+    fontSize: 13, fontWeight: FontWeight.w400,
+    height: 1.65, color: AppColors.textOnDark,
+  );
 
-  static TextStyle get titleMedium => GoogleFonts.inter(
-        fontSize: 16,
-        fontWeight: FontWeight.w600,
-        letterSpacing: 0.1,
-        color: AppColors.textPrimary,
-      );
-
+  // ── Legacy aliases for ThemeData textTheme ──
+  static TextStyle get displayLarge => displayLg;
+  static TextStyle get displayMedium => displayMd;
+  static TextStyle get displaySmall => displaySm;
+  static TextStyle get headlineLarge => headingLg;
+  static TextStyle get headlineMedium => headingMd;
+  static TextStyle get headlineSmall => headingSm;
+  static TextStyle get titleLarge => headingMd;
+  static TextStyle get titleMedium => headingSm;
   static TextStyle get titleSmall => GoogleFonts.inter(
-        fontSize: 14,
-        fontWeight: FontWeight.w600,
-        letterSpacing: 0.1,
-        color: AppColors.textPrimary,
-      );
-
-  // ─── Category Labels (UPPERCASE, tracked out) ─────────────────────────
-  static TextStyle get labelCategory => GoogleFonts.inter(
-        fontSize: 12,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 1.2,
-        color: AppColors.textSecondary,
-      );
-
-  static TextStyle get labelLarge => GoogleFonts.inter(
-        fontSize: 14,
-        fontWeight: FontWeight.w600,
-        letterSpacing: 0.5,
-        color: AppColors.textPrimary,
-      );
-
+    fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary,
+  );
+  static TextStyle get bodyLarge => bodyLg;
+  static TextStyle get bodyMedium => bodyMd;
+  static TextStyle get bodySmall => bodySm;
+  static TextStyle get labelLarge => labelLg;
   static TextStyle get labelMedium => GoogleFonts.inter(
-        fontSize: 12,
-        fontWeight: FontWeight.w600,
-        letterSpacing: 0.5,
-        color: AppColors.textSecondary,
-      );
+    fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary,
+  );
+  static TextStyle get labelSmall => labelSm;
 
-  static TextStyle get labelSmall => GoogleFonts.inter(
-        fontSize: 11,
-        fontWeight: FontWeight.w600,
-        letterSpacing: 0.8,
-        color: AppColors.textTertiary,
-      );
-
-  // ─── Body ─────────────────────────────────────────────────────────────
-  static TextStyle get bodyLarge => GoogleFonts.inter(
-        fontSize: 16,
-        fontWeight: FontWeight.w400,
-        height: 1.6,
-        letterSpacing: 0,
-        color: AppColors.textPrimary,
-      );
-
-  static TextStyle get bodyMedium => GoogleFonts.inter(
-        fontSize: 14,
-        fontWeight: FontWeight.w400,
-        height: 1.5,
-        letterSpacing: 0,
-        color: AppColors.textPrimary,
-      );
-
-  static TextStyle get bodySmall => GoogleFonts.inter(
-        fontSize: 12,
-        fontWeight: FontWeight.w400,
-        height: 1.4,
-        letterSpacing: 0,
-        color: AppColors.textSecondary,
-      );
-
-  // ─── Buttons ──────────────────────────────────────────────────────────
-  static TextStyle get button => buttonLarge;
-
-  static TextStyle get buttonLarge => GoogleFonts.inter(
-        fontSize: 16,
-        fontWeight: FontWeight.w600,
-        letterSpacing: 0.2,
-        color: AppColors.textOnPrimary,
-      );
-
-  static TextStyle get buttonMedium => GoogleFonts.inter(
-        fontSize: 14,
-        fontWeight: FontWeight.w600,
-        letterSpacing: 0.2,
-        color: AppColors.textOnPrimary,
-      );
-
-  static TextStyle get buttonSmall => GoogleFonts.inter(
-        fontSize: 12,
-        fontWeight: FontWeight.w600,
-        letterSpacing: 0.3,
-        color: AppColors.textOnPrimary,
-      );
-
-  // ─── Stats / Numbers ──────────────────────────────────────────────────
-  static TextStyle get statLarge => GoogleFonts.plusJakartaSans(
-        fontSize: 40,
-        fontWeight: FontWeight.w800,
-        letterSpacing: -0.5,
-        color: AppColors.textPrimary,
-      );
-
-  static TextStyle get statMedium => GoogleFonts.plusJakartaSans(
-        fontSize: 28,
-        fontWeight: FontWeight.w700,
-        letterSpacing: -0.3,
-        color: AppColors.textPrimary,
-      );
-
-  static TextStyle get statSmall => GoogleFonts.plusJakartaSans(
-        fontSize: 20,
-        fontWeight: FontWeight.w700,
-        letterSpacing: -0.2,
-        color: AppColors.textPrimary,
-      );
-
-  // ─── Code ─────────────────────────────────────────────────────────────
-  static TextStyle get codeLarge => GoogleFonts.jetBrainsMono(
-        fontSize: 14,
-        fontWeight: FontWeight.w400,
-        height: 1.6,
-        color: AppColors.textOnDark,
-      );
-
-  static TextStyle get codeSmall => GoogleFonts.jetBrainsMono(
-        fontSize: 12,
-        fontWeight: FontWeight.w400,
-        height: 1.5,
-        color: AppColors.textOnDark,
-      );
-
-  // ─── Special ──────────────────────────────────────────────────────────
-  static TextStyle get caption => bodySmall.copyWith(
-        color: AppColors.textTertiary,
-      );
-
-  static TextStyle get overline => GoogleFonts.inter(
-        fontSize: 10,
-        fontWeight: FontWeight.w600,
-        letterSpacing: 1.5,
-        color: AppColors.textSecondary,
-      );
-
-  static TextStyle get link => bodyMedium.copyWith(
-        color: AppColors.textLink,
-        decoration: TextDecoration.underline,
-      );
-
-  static TextStyle get error => bodySmall.copyWith(
-        color: AppColors.error,
-      );
+  // More legacy aliases
+  static TextStyle get caption => bodySm;
+  static TextStyle get buttonSmall => btnMd;
+  static TextStyle get statMedium => statMd;
+  static TextStyle get statLarge => statLg;
+  static TextStyle get buttonMedium => btnMd;
+  static TextStyle get labelCategory => GoogleFonts.inter(
+    fontSize: 11, fontWeight: FontWeight.w700,
+    letterSpacing: 1.2, color: AppColors.textTertiary,
+  );
 }

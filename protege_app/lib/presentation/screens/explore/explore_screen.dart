@@ -1,22 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_spacing.dart';
+import '../../../core/constants/app_design.dart';
 import '../../../core/theme/app_typography.dart';
-import '../../widgets/buttons/primary_button.dart';
+import '../../../providers/learning_provider.dart';
 import '../../widgets/common/animated_pressable.dart';
-import '../../widgets/common/speech_bubble.dart';
-import '../../widgets/common/staggered_list_item.dart';
-import '../../widgets/icons/protege_diamond_icon.dart';
-import '../../widgets/icons/topic_programming_icon.dart';
-import '../../widgets/icons/topic_data_icon.dart';
-import '../../widgets/icons/topic_science_icon.dart';
-import '../../widgets/icons/topic_math_icon.dart';
-import '../../widgets/icons/topic_default_icon.dart';
-import '../../widgets/common/category_label.dart';
+import '../../widgets/common/animated_progress_bar.dart';
+import '../../widgets/common/staggered_item.dart';
+import '../../widgets/common/section_header.dart';
 
-/// Explore screen for discovering new topics (Step 1: Input)
+/// Explore screen for discovering new topics
 class ExploreScreen extends ConsumerStatefulWidget {
   const ExploreScreen({super.key});
 
@@ -25,264 +20,292 @@ class ExploreScreen extends ConsumerStatefulWidget {
 }
 
 class _ExploreScreenState extends ConsumerState<ExploreScreen> {
-  final _topicController = TextEditingController();
+  final _searchController = TextEditingController();
+  String? _selectedTopic;
 
-  final List<_SuggestedTopic> _suggestedTopics = [
-    _SuggestedTopic('Python Programming', Icons.code_rounded, AppColors.purple, true),
-    _SuggestedTopic('Data Analysis', Icons.bar_chart_rounded, AppColors.orange, false),
-    _SuggestedTopic('Machine Learning', Icons.psychology_rounded, AppColors.blue, false),
-    _SuggestedTopic('Web Development', Icons.web_rounded, AppColors.green, false),
-    _SuggestedTopic('Mobile Apps', Icons.phone_android_rounded, AppColors.purple, false),
-    _SuggestedTopic('Cloud Computing', Icons.cloud_rounded, AppColors.amber, false),
+  static const _suggestedTopics = [
+    _SuggestedTopic('Python', PhosphorIconsStyle.fill, 'code'),
+    _SuggestedTopic('JavaScript', PhosphorIconsStyle.fill, 'code'),
+    _SuggestedTopic('Data Science', PhosphorIconsStyle.fill, 'data'),
+    _SuggestedTopic('Machine Learning', PhosphorIconsStyle.fill, 'ml'),
+    _SuggestedTopic('Web Development', PhosphorIconsStyle.fill, 'web'),
+    _SuggestedTopic('Mathematics', PhosphorIconsStyle.fill, 'math'),
+    _SuggestedTopic('Physics', PhosphorIconsStyle.fill, 'science'),
+    _SuggestedTopic('Algorithms', PhosphorIconsStyle.fill, 'algo'),
+    _SuggestedTopic('Flutter', PhosphorIconsStyle.fill, 'code'),
+    _SuggestedTopic('SQL', PhosphorIconsStyle.fill, 'data'),
   ];
 
   @override
   void dispose() {
-    _topicController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
   void _onContinue() {
-    if (_topicController.text.trim().isEmpty) return;
-    context.push('/create-path/goals', extra: _topicController.text.trim());
+    final topic = _selectedTopic ?? _searchController.text.trim();
+    if (topic.isEmpty) return;
+    context.push('/create-path/goals', extra: topic);
   }
 
-  Widget _topicIcon(String name) {
-    final lower = name.toLowerCase();
-    if (lower.contains('python') || lower.contains('programming') || lower.contains('code') || lower.contains('web') || lower.contains('mobile')) {
-      return const TopicProgrammingIcon(size: 56);
+  PhosphorIconData _topicIcon(String category) {
+    switch (category) {
+      case 'code': return PhosphorIcons.code(PhosphorIconsStyle.fill);
+      case 'data': return PhosphorIcons.database(PhosphorIconsStyle.fill);
+      case 'ml': return PhosphorIcons.robot(PhosphorIconsStyle.fill);
+      case 'web': return PhosphorIcons.globe(PhosphorIconsStyle.fill);
+      case 'math': return PhosphorIcons.mathOperations(PhosphorIconsStyle.fill);
+      case 'science': return PhosphorIcons.atom(PhosphorIconsStyle.fill);
+      case 'algo': return PhosphorIcons.treeStructure(PhosphorIconsStyle.fill);
+      default: return PhosphorIcons.graduationCap(PhosphorIconsStyle.fill);
     }
-    if (lower.contains('data') || lower.contains('analytics')) {
-      return const TopicDataIcon(size: 56);
+  }
+
+  Color _topicColor(String category) {
+    switch (category) {
+      case 'code': return AppColors.brand;
+      case 'data': return AppColors.accentTeal;
+      case 'ml': return AppColors.accentPink;
+      case 'web': return AppColors.accentOrange;
+      case 'math': return AppColors.info;
+      case 'science': return AppColors.accentIndigo;
+      case 'algo': return AppColors.success;
+      default: return AppColors.brand;
     }
-    if (lower.contains('machine') || lower.contains('science') || lower.contains('cloud')) {
-      return const TopicScienceIcon(size: 56);
-    }
-    if (lower.contains('math') || lower.contains('probability')) {
-      return const TopicMathIcon(size: 56);
-    }
-    return const TopicDefaultIcon(size: 56);
   }
 
   @override
   Widget build(BuildContext context) {
+    final learningPaths = ref.watch(learningPathsStreamProvider);
+    final hasInput = _selectedTopic != null || _searchController.text.trim().isNotEmpty;
+
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: Text('Explore', style: AppTypography.headlineSmall),
-        centerTitle: true,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Diamond + speech bubble
-            StaggeredListItem(
-              index: 0,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const ProtegeDiamondIcon(size: 40),
-                  const SizedBox(width: AppSpacing.md),
-                  const Expanded(
-                    child: SpeechBubble(
-                      text: "Here's what I recommend. Get started with one and switch any time.",
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xxl),
-
-            // Topic input
-            StaggeredListItem(
-              index: 1,
-              child: TextField(
-                controller: _topicController,
-                autofocus: false,
-                decoration: InputDecoration(
-                  hintText: 'e.g., React Native, French History...',
-                  prefixIcon: const Icon(Icons.search_rounded, color: AppColors.textTertiary),
-                  filled: true,
-                  fillColor: AppColors.surface,
-                  contentPadding: const EdgeInsets.all(AppSpacing.lg),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
-                    borderSide: const BorderSide(color: AppColors.border),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
-                    borderSide: const BorderSide(color: AppColors.border),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
-                    borderSide: const BorderSide(color: AppColors.green, width: 2),
-                  ),
-                ),
-                style: AppTypography.bodyLarge,
-                onSubmitted: (_) => _onContinue(),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-
-            // Featured TOP PICK card
-            StaggeredListItem(
-              index: 2,
-              child: AnimatedPressable(
-                onTap: () {
-                  _topicController.text = _suggestedTopics.first.name;
-                  _onContinue();
-                },
+      body: SafeArea(
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: AppSpacing.screenH.copyWith(top: 20, bottom: 120),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Search bar ──
+              StaggeredItem(
+                index: 0,
                 child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(AppSpacing.xl),
                   decoration: BoxDecoration(
-                    color: AppColors.purpleLight,
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
-                    border: Border.all(color: AppColors.purpleBorder, width: 2),
+                    color: AppColors.surfaceMuted,
+                    borderRadius: BorderRadius.circular(AppRadius.full),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: AppColors.yellow,
-                              borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
-                            ),
-                            child: Text(
-                              'TOP PICK',
-                              style: AppTypography.labelSmall.copyWith(
-                                color: AppColors.textPrimary,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ],
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (_) => setState(() => _selectedTopic = null),
+                    decoration: InputDecoration(
+                      hintText: 'Search topics...',
+                      prefixIcon: Padding(
+                        padding: const EdgeInsets.only(left: 16, right: 8),
+                        child: PhosphorIcon(PhosphorIcons.magnifyingGlass(), size: 20, color: AppColors.textTertiary),
                       ),
-                      const SizedBox(height: AppSpacing.md),
-                      const Center(child: TopicProgrammingIcon(size: 64)),
-                      const SizedBox(height: AppSpacing.lg),
-                      CategoryLabel(text: 'LEARNING PATH', color: AppColors.purple),
-                      const SizedBox(height: AppSpacing.sm),
-                      Text(_suggestedTopics.first.name, style: AppTypography.headlineMedium),
-                      const SizedBox(height: AppSpacing.xs),
-                      Text(
-                        'Master the fundamentals with hands-on practice',
-                        style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
-                      ),
-                    ],
+                      prefixIconConstraints: const BoxConstraints(minWidth: 44),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    ),
+                    style: AppTypography.bodyMd.copyWith(color: AppColors.textPrimary),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
+              const SizedBox(height: AppSpacing.xxxl),
 
-            // Regular topic cards
-            ...List.generate(
-              _suggestedTopics.length - 1,
-              (i) {
-                final topic = _suggestedTopics[i + 1];
-                return StaggeredListItem(
-                  index: 3 + i,
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                    child: AnimatedPressable(
-                      onTap: () {
-                        _topicController.text = topic.name;
-                        _onContinue();
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(AppSpacing.lg),
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceElevated,
-                          borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
-                          border: Border.all(color: AppColors.border, width: 1),
-                        ),
-                        child: Row(
-                          children: [
-                            SizedBox(width: 56, height: 56, child: _topicIcon(topic.name)),
-                            const SizedBox(width: AppSpacing.lg),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  CategoryLabel(text: 'LEARNING PATH', color: topic.color),
-                                  const SizedBox(height: AppSpacing.xs),
-                                  Text(topic.name, style: AppTypography.headlineSmall),
-                                ],
-                              ),
-                            ),
-                            const Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary),
-                          ],
-                        ),
-                      ),
+              // ── Featured card ──
+              StaggeredItem(
+                index: 1,
+                child: AnimatedPressable(
+                  onTap: () {
+                    setState(() => _selectedTopic = 'Python');
+                    _onContinue();
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(AppSpacing.xl),
+                    decoration: BoxDecoration(
+                      color: AppColors.brandLight,
+                      borderRadius: BorderRadius.circular(AppRadius.xl),
+                      border: Border.all(color: AppColors.brand, width: 2),
                     ),
-                  ),
-                );
-              },
-            ),
-
-            const SizedBox(height: AppSpacing.lg),
-
-            // Learn from Documents card
-            StaggeredListItem(
-              index: 8,
-              child: AnimatedPressable(
-                onTap: () => context.push('/documents'),
-                child: Container(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
-                  decoration: BoxDecoration(
-                    color: AppColors.blueLight,
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
-                    border: Border.all(color: AppColors.blue.withAlpha(40)),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(AppSpacing.md),
-                        decoration: BoxDecoration(
-                          color: AppColors.blue.withAlpha(30),
-                          borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
-                        ),
-                        child: const Icon(Icons.description_rounded, color: AppColors.blue, size: 24),
-                      ),
-                      const SizedBox(width: AppSpacing.lg),
-                      Expanded(
-                        child: Column(
+                    child: Stack(
+                      children: [
+                        Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Learn from Documents', style: AppTypography.titleMedium),
-                            const SizedBox(height: 2),
+                            PhosphorIcon(
+                              PhosphorIcons.graduationCap(PhosphorIconsStyle.fill),
+                              size: 48,
+                              color: AppColors.brand,
+                            ),
+                            const SizedBox(height: AppSpacing.lg),
+                            Text('LEARNING PATH', style: AppTypography.labelSm.copyWith(color: AppColors.brand)),
+                            const SizedBox(height: AppSpacing.xs),
+                            Text('Python Fundamentals', style: AppTypography.headingLg),
+                            const SizedBox(height: AppSpacing.sm),
+                            Text('Master Python from basics to advanced', style: AppTypography.bodyMd),
+                          ],
+                        ),
+                        Positioned(
+                          top: 0,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.warning,
+                              borderRadius: BorderRadius.circular(AppRadius.full),
+                            ),
+                            child: Text('TOP PICK', style: AppTypography.labelSm.copyWith(color: AppColors.textOnBrand)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xxxl),
+
+              // ── Browse Categories ──
+              StaggeredItem(
+                index: 2,
+                child: const SectionHeader(title: 'Browse Categories'),
+              ),
+              Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.sm,
+                children: _suggestedTopics.asMap().entries.map((entry) {
+                  final topic = entry.value;
+                  final isSelected = _selectedTopic == topic.name;
+                  final color = _topicColor(topic.category);
+
+                  return StaggeredItem(
+                    index: 3 + entry.key,
+                    child: AnimatedPressable(
+                      onTap: () {
+                        setState(() {
+                          _selectedTopic = isSelected ? null : topic.name;
+                          if (!isSelected) _searchController.clear();
+                        });
+                      },
+                      child: AnimatedContainer(
+                        duration: AppMotion.fast,
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+                        decoration: BoxDecoration(
+                          color: isSelected ? color : AppColors.surface,
+                          borderRadius: BorderRadius.circular(AppRadius.lg),
+                          boxShadow: isSelected ? [] : AppShadow.sm,
+                          border: isSelected ? null : Border.all(color: AppColors.borderLight),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            PhosphorIcon(
+                              _topicIcon(topic.category),
+                              size: 18,
+                              color: isSelected ? AppColors.textOnBrand : color,
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
                             Text(
-                              'Upload PDFs & images — get AI summaries and chat',
-                              style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
+                              topic.name,
+                              style: AppTypography.headingSm.copyWith(
+                                fontSize: 14,
+                                color: isSelected ? AppColors.textOnBrand : AppColors.textPrimary,
+                              ),
                             ),
                           ],
                         ),
                       ),
-                      const Icon(Icons.chevron_right_rounded, size: 20, color: AppColors.blue),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: AppSpacing.xxxl),
+
+              // ── Your Paths ──
+              learningPaths.when(
+                data: (paths) {
+                  if (paths.isEmpty) return const SizedBox.shrink();
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SectionHeader(title: 'Your Paths'),
+                      SizedBox(
+                        height: 120,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
+                          itemCount: paths.length,
+                          separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.md),
+                          itemBuilder: (context, index) {
+                            final path = paths[index];
+                            return AnimatedPressable(
+                              onTap: () => context.push('/learn/${path.id}'),
+                              child: Container(
+                                width: 160,
+                                padding: const EdgeInsets.all(AppSpacing.lg),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface,
+                                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                                  boxShadow: AppShadow.sm,
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      path.topic,
+                                      style: AppTypography.headingSm.copyWith(fontSize: 14),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    Column(
+                                      children: [
+                                        AnimatedProgressBar(progress: path.progress),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          '${(path.progress * 100).toInt()}%',
+                                          style: AppTypography.bodySm,
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
                     ],
+                  );
+                },
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
+              const SizedBox(height: AppSpacing.huge),
+
+              // ── Continue button ──
+              if (hasInput)
+                AnimatedPressable(
+                  onTap: _onContinue,
+                  child: Container(
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: AppColors.brand,
+                      borderRadius: BorderRadius.circular(AppRadius.xl),
+                    ),
+                    child: Center(
+                      child: Text(
+                        'Continue',
+                        style: AppTypography.btnLg.copyWith(color: AppColors.textOnBrand),
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
-
-            const SizedBox(height: AppSpacing.xxl),
-
-            // Continue button
-            PrimaryButton(
-              label: 'Continue',
-              onPressed: _onContinue,
-              icon: Icons.arrow_forward_rounded,
-            ),
-
-            const SizedBox(height: AppSpacing.xxxl),
-          ],
+              const SizedBox(height: AppSpacing.navbarClearance),
+            ],
+          ),
         ),
       ),
     );
@@ -291,9 +314,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
 
 class _SuggestedTopic {
   final String name;
-  final IconData icon;
-  final Color color;
-  final bool isFeatured;
-
-  _SuggestedTopic(this.name, this.icon, this.color, this.isFeatured);
+  final PhosphorIconsStyle style;
+  final String category;
+  const _SuggestedTopic(this.name, this.style, this.category);
 }

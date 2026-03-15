@@ -1,5 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'package:crypto/crypto.dart';
+import 'dart:convert';
+import 'dart:math';
 import '../services/firebase_service.dart';
 import '../models/user_model.dart';
 import '../../core/utils/logger.dart';
@@ -124,6 +128,73 @@ class AuthRepository {
     } catch (e) {
       AppLogger.error('Google sign in failed', tag: 'AuthRepo', error: e);
       return Result.failure('Failed to sign in with Google', e);
+    }
+  }
+
+  /// Generate a random nonce
+  String _generateNonce([int length = 32]) {
+    const charset = '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
+    final random = Random.secure();
+    return List.generate(length, (_) => charset[random.nextInt(charset.length)]).join();
+  }
+
+  /// Sign in with Apple
+  Future<Result<UserModel>> signInWithApple() async {
+    try {
+      final rawNonce = _generateNonce();
+      final nonce = sha256.convert(utf8.encode(rawNonce)).toString();
+      
+      final appleCredential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+        nonce: nonce,
+      );
+
+      final credential = OAuthProvider('apple.com').credential(
+        idToken: appleCredential.identityToken,
+        rawNonce: rawNonce,
+      );
+
+      final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+      final user = userCredential.user!;
+
+      // Check if user exists in Firestore
+      final doc = await _firebaseService.getDoc('users/${user.uid}');
+      if (doc.exists) {
+        // Update last login
+        await _firebaseService.updateDoc(
+          'users/${user.uid}',
+          {'lastLoginAt': DateTime.now()},
+        );
+        return Result.success(UserModel.fromJson(doc.data()!));
+      } else {
+        // Create new user, prioritize Apple's provided name
+        String displayName = 'Learner';
+        if (appleCredential.givenName != null || appleCredential.familyName != null) {
+          final first = appleCredential.givenName ?? '';
+          final last = appleCredential.familyName ?? '';
+          displayName = '$first $last'.trim();
+        } else if (user.displayName != null && user.displayName!.isNotEmpty) {
+          displayName = user.displayName!;
+        }
+
+        final userModel = await _createUserDocument(user, displayName);
+        return Result.success(userModel);
+      }
+    } on SignInWithAppleAuthorizationException catch (e) {
+      if (e.code == AuthorizationErrorCode.canceled) {
+        return Result.failure('Apple sign in was cancelled');
+      }
+      AppLogger.error('Apple sign in failed', tag: 'AuthRepo', error: e);
+      return Result.failure('Failed to sign in with Apple', e);
+    } on FirebaseAuthException catch (e) {
+      AppLogger.error('Apple sign in failed', tag: 'AuthRepo', error: e);
+      return Result.failure(_getAuthErrorMessage(e.code), e);
+    } catch (e) {
+      AppLogger.error('Apple sign in failed', tag: 'AuthRepo', error: e);
+      return Result.failure('Failed to sign in with Apple', e);
     }
   }
 

@@ -18,6 +18,10 @@ dependencies:
   # Google Sign In
   google_sign_in: ^6.2.1
   
+  # Apple Sign In
+  sign_in_with_apple: ^6.1.0
+  crypto: ^3.0.3
+  
   # State Management
   flutter_riverpod: ^2.6.1
   
@@ -45,6 +49,10 @@ dependencies:
   confetti: ^0.8.0
   shimmer: ^3.0.0
   lottie: ^3.3.2
+  phosphor_flutter: ^2.1.0
+  record: ^6.2.0
+  path_provider: ^2.1.5
+  audioplayers: ^6.6.0
 
 dev_dependencies:
   integration_test:
@@ -55,3 +63,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/animations/

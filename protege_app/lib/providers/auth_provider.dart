@@ -125,6 +125,19 @@ class AuthNotifier extends StateNotifier<AsyncValue<UserModel?>> {
     );
   }
 
+  Future<void> signInWithApple() async {
+    state = const AsyncValue.loading();
+    final result = await _authRepository.signInWithApple();
+    result.when(
+      success: (user) {
+        state = AsyncValue.data(user);
+      },
+      failure: (message, error) {
+        state = AsyncValue.error(message, StackTrace.current);
+      },
+    );
+  }
+
   Future<void> signOut() async {
     await _authRepository.signOut();
     state = const AsyncValue.data(null);

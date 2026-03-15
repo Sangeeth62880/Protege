@@ -1,5 +1,5 @@
 /// Resource Types
-enum ResourceType { video, article, repository, wikipedia, book, qa, course, documentation, unknown }
+enum ResourceType { video, article, repository, wikipedia, book, qa, course, documentation, textbook, unknown }
 
 /// Base Resource Model
 abstract class LearningResource {
@@ -256,6 +256,47 @@ class DocResource extends LearningResource {
   }
 }
 
+/// Textbook Resource (OpenStax)
+class TextbookResource extends LearningResource {
+  final String? coverUrl;
+  final String slug;
+  final List<String> subjects;
+  final String source;
+  final String deepLink;
+  final String license;
+  final String attribution;
+
+  const TextbookResource({
+    required super.title,
+    required super.description,
+    required super.url,
+    this.coverUrl,
+    required this.slug,
+    this.subjects = const [],
+    required this.source,
+    required this.deepLink,
+    required this.license,
+    required this.attribution,
+    super.qualityScore,
+  }) : super(type: ResourceType.textbook);
+
+  factory TextbookResource.fromJson(Map<String, dynamic> json) {
+    return TextbookResource(
+      title: json['title'] ?? '',
+      description: json['description'] ?? '',
+      url: json['url'] ?? '',
+      coverUrl: json['cover_url'],
+      slug: json['slug'] ?? '',
+      subjects: List<String>.from(json['subjects'] ?? []),
+      source: json['source'] ?? 'openstax',
+      deepLink: json['deep_link'] ?? '',
+      license: json['license'] ?? 'CC BY 4.0',
+      attribution: json['attribution'] ?? '',
+      qualityScore: (json['relevance_score'] as num?)?.toDouble() ?? 0.0,
+    );
+  }
+}
+
 /// Curated Lesson Resources Container
 class LessonResources {
   final String lessonTitle;
@@ -264,6 +305,7 @@ class LessonResources {
   final List<GithubResource> repositories;
   final WikipediaResource? wikipedia;
   final List<BookResource> books;
+  final List<TextbookResource> textbooks;
   final List<QAResource> questions;
   final List<CourseResource> courses;
   final List<DocResource> docs;
@@ -276,6 +318,7 @@ class LessonResources {
     this.repositories = const [],
     this.wikipedia,
     this.books = const [],
+    this.textbooks = const [],
     this.questions = const [],
     this.courses = const [],
     this.docs = const [],
@@ -303,6 +346,10 @@ class LessonResources {
           : null,
       books: (json['books'] as List?)
               ?.map((e) => BookResource.fromJson(e))
+              .toList() ??
+          [],
+      textbooks: (json['textbooks'] as List?)
+              ?.map((e) => TextbookResource.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
       questions: (json['questions'] as List?)

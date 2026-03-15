@@ -36,6 +36,14 @@ YOUR PERSONALITY:
 - You sometimes make cute mistakes in understanding that help the teacher clarify
 - You use emojis naturally (1-2 per message, not excessive)
 
+TRUTH-AWARE STUDENT CONTRACT:
+- The human is the teacher, but they can be wrong.
+- For ANY claim that is factual (definitions, formulas, rules, theorems, facts):
+  - Attempt to verify internally. If it conflicts with known facts or the Truth Reference:
+    - Say "I think there might be a mismatch with what I know. Can we test this with a small example?" or politely push back.
+  - Do NOT accept incorrect information as truth. If unsure, say "I can't confidently verify this; I'll treat it as unconfirmed."
+  - Explicitly label unverified items as statements or hypotheses.
+
 YOUR BEHAVIOR:
 - Ask follow-up questions that are DIRECTLY related to what the teacher just said
 - Never pretend to understand if the explanation is unclear
@@ -44,7 +52,8 @@ YOUR BEHAVIOR:
 - Ask "why does it work that way?" or "can you give me an example?" frequently
 - Connect new concepts to things you already discussed in this conversation
 
-IMPORTANT:
+CRITICAL CONSTRAINTS:
+- YOU MUST ASK ONLY ONE QUESTION AT A TIME. DO NOT ask multi-part interrogations. 
 - You are NOT a teacher. You are a STUDENT learning from the human.
 - Your questions should test whether the human truly understands the topic.
 - Ask questions that probe DEPTH of understanding, not just surface knowledge.
@@ -82,16 +91,25 @@ YOUR PERSONALITY:
 - You sometimes bring up related things you've heard to test the teacher
 - You prefer practical examples over theory
 
+TRUTH-AWARE STUDENT CONTRACT:
+- The human is the teacher, but they can be wrong.
+- For ANY claim that is factual (definitions, formulas, rules, theorems, facts):
+  - Attempt to verify internally. If it conflicts with known facts or the Truth Reference:
+    - Call it out: "Could you show a quick proof or source? I want to confirm before I adopt it" or "Let's sanity-check with a counterexample."
+  - Do NOT accept incorrect information as truth. Prefer "I'm not sure" over learning something wrong.
+  - Explicitly label unverified items as statements or hypotheses.
+
 YOUR BEHAVIOR:
 - Ask questions that specifically probe whether the teacher REALLY understands
 - Challenge with counter-examples or edge cases related to the SPECIFIC TOPIC
-- Push for practical, real-world applications
+- Push for practical, real-world examples
 - If the teacher gives a surface-level answer, push deeper
 - Sometimes play devil's advocate
 - Build on the conversation history - reference what was said before
 - Don't be rude, but don't be easy either
 
-IMPORTANT:
+CRITICAL CONSTRAINTS:
+- YOU MUST ASK ONLY ONE QUESTION AT A TIME. DO NOT ask multi-part interrogations.
 - You are NOT a teacher. You are a STUDENT who is hard to impress.
 - Your questions should naturally test depth of understanding.
 - Focus questions on the SPECIFIC TOPIC being taught.
@@ -126,6 +144,14 @@ YOUR PERSONALITY:
 - You sometimes ask "Is this how it works in real projects?"
 - You worry about common pitfalls: "What if I do this wrong?"
 
+TRUTH-AWARE STUDENT CONTRACT:
+- The human is the teacher, but they can be wrong.
+- For ANY claim that is factual (definitions, formulas, rules, theorems, facts):
+  - Attempt to verify internally. If it conflicts with known facts or the Truth Reference:
+    - Express polite confusion: "Wait, I thought it worked differently. Can we test this with a small example to be sure?"
+  - Do NOT accept incorrect information as truth. If unsure, treat it as unconfirmed.
+  - Explicitly mark unverified claims.
+
 YOUR BEHAVIOR:
 - Ask clarifying questions about the SPECIFIC parts you don't understand
 - Request real-world examples and use cases
@@ -135,7 +161,8 @@ YOUR BEHAVIOR:
 - Build on previous conversation points
 - Ask "Can you walk me through that step by step?"
 
-IMPORTANT:
+CRITICAL CONSTRAINTS:
+- YOU MUST ASK ONLY ONE QUESTION AT A TIME. DO NOT bowl the teacher over with multiple questions.
 - You are NOT a teacher. You are a STUDENT who needs patience.
 - Your questions should test whether the teacher can explain clearly to a non-technical person.
 - Focus on the SPECIFIC TOPIC being taught.
@@ -169,6 +196,14 @@ YOUR PERSONALITY:
 - You want to understand trade-offs and design decisions
 - You ask about real-world production scenarios
 
+TRUTH-AWARE STUDENT CONTRACT:
+- The human is the teacher, but they can be wrong.
+- For ANY claim that is factual (definitions, formulas, rules, theorems, facts):
+  - Attempt to verify internally. If it conflicts with known facts or the Truth Reference:
+    - Challenge calmly: "I'm not sure that aligns with the documentation. Could we sanity-check that with a quick code snippet or example?"
+  - Do NOT accept incorrect information as truth.
+  - Keep claims as hypotheses until robustly verified via examples or first principles.
+
 YOUR BEHAVIOR:
 - Ask specific technical follow-up questions related to the TOPIC
 - Challenge with edge cases that reveal depth of understanding
@@ -178,7 +213,8 @@ YOUR BEHAVIOR:
 - Build on previous conversation points
 - Sometimes introduce slightly advanced related concepts to test breadth
 
-IMPORTANT:
+CRITICAL CONSTRAINTS:
+- YOU MUST ASK ONLY ONE QUESTION AT A TIME. DO NOT ask multi-part interrogations.
 - You are NOT a teacher. You are a STUDENT who asks tough technical questions.
 - Your questions should genuinely test deep understanding of the SPECIFIC TOPIC.
 - Keep responses to 2-4 sentences maximum.
@@ -230,7 +266,39 @@ class PersonaEngine:
         print(f"[PERSONA_ENGINE] Topic: {topic}")
         print(f"[PERSONA_ENGINE] Persona: {persona['name']}")
         
-        # Generate contextual opening message
+        # 1. Generate Truth Reference
+        truth_reference = None
+        try:
+            truth_prompt = f"""Generate a concise, authoritative "Truth Reference" for the topic: "{topic}".
+This is to guard against misinformation during a reverse tutoring session.
+
+Respond with ONLY valid JSON matching this schema:
+{{
+  "topic": "{topic}",
+  "canonical_facts": ["fact 1", "fact 2", "fact 3", "fact 4", "fact 5"],
+  "common_misconceptions": [
+    {{"false_claim": "...", "truth": "..."}},
+    {{"false_claim": "...", "truth": "..."}}
+  ],
+  "example_problems": [
+    {{"scenario": "...", "correct_result": "..."}}
+  ]
+}}"""
+            
+            truth_resp = await self.groq.generate_with_system_prompt(
+                system_prompt="You are an expert curriculum designer. Provide highly accurate, concise canonical facts about topics to prevent AI hallucination or susceptibility to misinformation. Respond ONLY with valid JSON.",
+                user_message=truth_prompt,
+                temperature=0.1,
+                max_tokens=600,
+                json_response=True
+            )
+            truth_reference = self.groq.parse_json_response(truth_resp)
+        except Exception as e:
+            print(f"[PERSONA_ENGINE] Failed to generate Truth Reference: {e}")
+            # Degrade gracefully
+            truth_reference = {"topic": topic, "canonical_facts": [], "common_misconceptions": [], "example_problems": []}
+            
+        # 2. Generate contextual opening message
         opening_prompt = f"""The teacher wants to teach you about: "{topic}"
 
 Generate your FIRST message as {persona['name']} (age {persona['age']}).
@@ -241,6 +309,7 @@ Requirements:
 - Ask an opening question that is DIRECTLY about "{topic}"
 - Stay in character as a {persona['age']}-year-old
 - 2-3 sentences maximum
+- ONLY ONE QUESTION.
 - Make it feel natural, not scripted
 
 Remember: You know NOTHING about {topic}. You're genuinely curious."""
@@ -259,11 +328,12 @@ Remember: You know NOTHING about {topic}. You're genuinely curious."""
             print(f"[PERSONA_ENGINE] Error generating greeting: {e}")
             greeting = self._get_fallback_greeting(persona_id, topic)
         
-        # Initialize conversation history
+        # Initialize conversation history with new session state constraints
         self.conversations[session_id] = {
             "topic": topic,
             "persona_id": persona_id,
             "persona": persona,
+            "truth_reference": truth_reference,
             "messages": [
                 {"role": "assistant", "content": greeting}
             ],
@@ -272,7 +342,10 @@ Remember: You know NOTHING about {topic}. You're genuinely curious."""
             "concepts_covered": [],
             "clarity_scores": [],
             "depth_scores": [],
-            "accuracy_scores": []
+            "accuracy_scores": [],
+            # New fields for Accuracy Confidence and Lifecycle tracking
+            "accuracy_confidence": 100,
+            "session_stage": "warm_up" # warm_up, core, mastery, conclusion
         }
         
         return {
@@ -321,6 +394,27 @@ Remember: You know NOTHING about {topic}. You're genuinely curious."""
         # Add user message to history
         messages.append({"role": "user", "content": user_message})
         
+        # Update Session Stage based on turns
+        if message_count <= 3:
+            session["session_stage"] = "warm_up"
+        elif message_count <= 10:
+            session["session_stage"] = "core"
+        elif message_count <= 14:
+            session["session_stage"] = "mastery"
+        else:
+            session["session_stage"] = "conclusion"
+            
+        # Check for Session Wrap-up limit
+        MAX_TURNS = 15
+        force_conclusion = (message_count >= MAX_TURNS)
+        
+        # Evaluate the user's explanation quality FIRST to know current accuracy confidence
+        evaluation = await self._evaluate_explanation(
+            session=session,
+            user_message=user_message,
+            message_count=message_count
+        )
+        
         # Build conversation context for the AI
         conversation_context = self._build_conversation_context(session)
         
@@ -332,10 +426,21 @@ Remember: You know NOTHING about {topic}. You're genuinely curious."""
             user_message=user_message
         )
         
+        if force_conclusion:
+            response_directive = f"""STAGE: Conclusion
+You have reached the maximum length of the learning session.
+Politely thank the teacher for their time and explanation of "{topic}".
+State one main thing you feel you learned well.
+Do NOT ask any more questions. Let the teacher know you have to go."""
+        
         # Generate persona response
         try:
+            truth_ref_text = ""
+            if session.get("truth_reference"):
+                truth_ref_text = f"\nTRUTH REFERENCE (Use this to verify their claims):\n{json.dumps(session['truth_reference'], indent=2)}\n"
+                
             response_prompt = f"""{conversation_context}
-
+{truth_ref_text}
 ---
 
 The teacher just said:
@@ -348,10 +453,10 @@ Topic being taught: "{topic}"
 
 Requirements:
 - Respond DIRECTLY to what the teacher just said
-- Ask a follow-up question about the SPECIFIC content of their explanation
+- Ask ONLY ONE follow-up question (unless ending the session) about the SPECIFIC content of their explanation
 - Stay in character - use vocabulary appropriate for a {persona['age']}-year-old
 - Reference specific details from what the teacher said
-- If the explanation was unclear, ask for clarification on the SPECIFIC unclear part
+- If the explanation violates the Truth Reference, challenge it per your TRUTH-AWARE STUDENT guidelines.
 - If the explanation was good, acknowledge it and ask a deeper question
 - 2-4 sentences maximum
 - Do NOT explain the topic yourself - you are the STUDENT"""
@@ -372,18 +477,16 @@ Requirements:
         # Add AI response to history
         messages.append({"role": "assistant", "content": ai_response})
         
-        # Evaluate the user's explanation quality
-        evaluation = await self._evaluate_explanation(
-            session=session,
-            user_message=user_message,
-            message_count=message_count
-        )
-        
         # Keep conversation history manageable (last 20 messages)
         if len(messages) > 20:
             # Keep first message (greeting) and last 18
             session["messages"] = [messages[0]] + messages[-18:]
-        
+            
+        # Determine if session should logically end (max score + >8 turns OR hit hard limit)
+        auto_complete = False
+        if force_conclusion or (evaluation["aha_score"] >= 100 and message_count >= 8 and evaluation.get("accuracy_confidence", 100) >= 90):
+            auto_complete = True
+            
         return {
             "response": ai_response,
             "aha_score": evaluation["aha_score"],
@@ -391,6 +494,10 @@ Requirements:
             "accuracy_score": evaluation["accuracy"],
             "depth_score": evaluation["depth"],
             "feedback": evaluation.get("feedback"),
+            "misconception_detected": evaluation.get("misconception_detected"),
+            "misconception_canonical": evaluation.get("misconception_canonical"),
+            "accuracy_confidence": evaluation.get("accuracy_confidence", 100),
+            "session_auto_complete": auto_complete,
             "message_count": message_count,
             "session_id": session_id
         }
@@ -534,65 +641,115 @@ Ask about advanced aspects, real-world applications, or common mistakes.
         """Evaluate the quality of the user's explanation."""
         
         topic = session["topic"]
+        truth_reference_text = ""
+        if session.get("truth_reference"):
+            truth_reference_text = f"\nAgainst this Truth Reference:\n{json.dumps(session['truth_reference'], indent=2)}"
+            
+        misconception_detected = None
+        misconception_canonical = None
         
-        # For efficiency, do AI evaluation every 2 messages
-        if message_count % 2 == 0 or message_count <= 2:
-            try:
-                eval_prompt = f"""Evaluate this teaching explanation about "{topic}":
+        # Set dynamic thresholds
+        is_confident = False
+        is_wrong = False
+        
+        # AI evaluation logic
+        try:
+            eval_prompt = f"""Evaluate this teaching explanation about "{topic}":
 
 "{user_message}"
+{truth_reference_text}
 
 Context: Message #{message_count} in the conversation.
 
 Rate on a scale of 0-100:
 - clarity: How clear and understandable is the explanation?
-- accuracy: How factually correct is the explanation? (If you can't verify, give 70)
+- accuracy: How factually correct is the explanation? Reference the Truth Reference if provided. Be strict on factual errors.
 - depth: How deep does the explanation go?
 
+Also detect if there is a fundamental factual misconception being taught based on the Truth Reference.
+If so, define 'misconception_detected' as the false claim and 'misconception_canonical' as the correct truth.
+
 Respond with ONLY JSON:
-{{"clarity": <score>, "accuracy": <score>, "depth": <score>, "feedback": "one sentence feedback"}}"""
+{{
+  "clarity": <score>, 
+  "accuracy": <score>, 
+  "depth": <score>, 
+  "feedback": "one sentence feedback",
+  "misconception_detected": "the false claim (or null)",
+  "misconception_canonical": "the correct canonical fact (or null)"
+}}"""
+            
+            eval_response = await self.groq.generate_with_system_prompt(
+                system_prompt="You are an education quality evaluator. Be fair but rigorous. Check claims against truth references. Respond with only valid JSON.",
+                user_message=eval_prompt,
+                temperature=0.2,
+                max_tokens=250,
+                json_response=True
+            )
+            
+            scores = self.groq.parse_json_response(eval_response)
+            
+            clarity = min(100, max(0, scores.get("clarity", 60)))
+            accuracy = min(100, max(0, scores.get("accuracy", 60)))
+            depth = min(100, max(0, scores.get("depth", 50)))
+            feedback = scores.get("feedback")
+            misconception_detected = scores.get("misconception_detected")
+            misconception_canonical = scores.get("misconception_canonical")
+            
+            # Determine factual classification for confidence scoring
+            if accuracy >= 80 and not misconception_detected:
+                is_confident = True
+            elif accuracy <= 50 or misconception_detected:
+                is_wrong = True
                 
-                eval_response = await self.groq.generate_with_system_prompt(
-                    system_prompt="You are an education quality evaluator. Be fair but rigorous. Respond with only valid JSON.",
-                    user_message=eval_prompt,
-                    temperature=0.2,
-                    max_tokens=100,
-                    json_response=True
-                )
-                
-                scores = self.groq.parse_json_response(eval_response)
-                
-                clarity = min(100, max(0, scores.get("clarity", 60)))
-                accuracy = min(100, max(0, scores.get("accuracy", 60)))
-                depth = min(100, max(0, scores.get("depth", 50)))
-                feedback = scores.get("feedback")
-                
-            except Exception as e:
-                print(f"[PERSONA_ENGINE] Evaluation error: {e}")
-                # Heuristic-based evaluation as fallback
-                clarity, accuracy, depth, feedback = self._heuristic_evaluate(user_message)
-        else:
-            # Use heuristic for odd messages to save API calls
+        except Exception as e:
+            print(f"[PERSONA_ENGINE] Evaluation error: {e}")
             clarity, accuracy, depth, feedback = self._heuristic_evaluate(user_message)
         
-        # Store scores
+        # Store sub-scores
         session["clarity_scores"].append(clarity)
         session["accuracy_scores"].append(accuracy)
         session["depth_scores"].append(depth)
         
-        # Calculate running Aha! score (weighted average of all evaluations)
-        aha_score = int(
+        # --- Update Accuracy Confidence ---
+        current_confidence = session.get("accuracy_confidence", 100)
+        
+        if is_wrong:
+            # -6 to -10 penalty for misinformation
+            penalty = 8 if misconception_detected else 6
+            current_confidence = max(0, current_confidence - penalty)
+        elif is_confident:
+            # +5 to +8 boost for solid facts
+            current_confidence = min(100, current_confidence + 6)
+        else:
+            # Minor decay for neutral/vague answers to challenge them
+            current_confidence = max(0, current_confidence - 1)
+            
+        session["accuracy_confidence"] = current_confidence
+        
+        # --- Calculate Aha! Score ---
+        # Weighted average of evaluations
+        raw_aha = (
             self._avg(session["clarity_scores"]) * 0.35 +
             self._avg(session["accuracy_scores"]) * 0.35 +
             self._avg(session["depth_scores"]) * 0.30
         )
         
+        aha_score = int(raw_aha)
+        
+        # Cap Aha! score if accuracy confidence is too low
+        if current_confidence < 70 and aha_score > 80:
+            aha_score = 79
+            
         return {
             "clarity": clarity,
             "accuracy": accuracy,
             "depth": depth,
             "aha_score": aha_score,
-            "feedback": feedback
+            "accuracy_confidence": current_confidence,
+            "feedback": feedback,
+            "misconception_detected": misconception_detected,
+            "misconception_canonical": misconception_canonical
         }
     
     def _heuristic_evaluate(self, message: str) -> tuple:

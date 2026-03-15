@@ -19,6 +19,8 @@ LESSON_CONTENT_PROMPT = """You are an expert educator creating a detailed, struc
 3. Every explanation must build on the lesson_description and expand it with real depth.
 4. Code examples must be WORKING, COMPLETE, and RUNNABLE — no pseudo-code unless explicitly labeled.
 5. Key takeaways must be specific to this lesson, NOT generic platitudes like "practice writing clean code".
+6. Code blocks MUST ONLY be generated if absolutely necessary to show syntax examples or demonstrate functionality.
+7. When showing code, ALWAYS use a real-world, practical example problem (e.g., building a small feature or solving a concrete issue). Do NOT use abstract placeholders like 'foo' and 'bar'.
 
 ## Required Output Format (respond ONLY with this JSON structure, no markdown wrapping):
 {{

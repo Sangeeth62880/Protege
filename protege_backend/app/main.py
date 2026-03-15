@@ -15,6 +15,7 @@ from app.api.routes.quiz import router as quiz_router
 from app.api.routes.teaching import router as teaching_router
 from app.api.routes.teaching_simple import router as teaching_simple_router
 from app.api.routes.documents import router as documents_router
+from app.api.routes.audio import router as audio_router
 
 # Create FastAPI app
 app = FastAPI(
@@ -147,6 +148,7 @@ app.include_router(quiz_router, prefix="/api/v1/quiz", tags=["Quiz"])
 app.include_router(teaching_router, prefix="/api/v1/teaching", tags=["Teaching"])
 app.include_router(teaching_simple_router, prefix="/api/v1/teaching-simple", tags=["Teaching Simple"])
 app.include_router(documents_router, prefix="/api/v1/documents", tags=["Documents"])
+app.include_router(audio_router, prefix="/api/v1/audio", tags=["Audio"])
 
 
 # Tutor Routes

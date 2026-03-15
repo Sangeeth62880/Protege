@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     GOOGLE_SEARCH_API_KEY: str = ""
     GOOGLE_SEARCH_ENGINE_ID: str = ""
     GITHUB_TOKEN: str = ""
+    SARVAM_API_KEY: str = ""
     
     # Firebase
     FIREBASE_PROJECT_ID: str = ""

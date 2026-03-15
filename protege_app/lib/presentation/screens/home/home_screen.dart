@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_spacing.dart';
+import '../../../core/constants/app_design.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/dashboard_provider.dart';
@@ -10,12 +11,11 @@ import '../../../providers/user_provider.dart';
 import '../../../data/models/dashboard_models.dart';
 import '../../widgets/common/animated_pressable.dart';
 import '../../widgets/common/animated_progress_bar.dart';
-import '../../widgets/common/staggered_list_item.dart';
-import '../../widgets/common/shimmer_placeholder.dart';
-import '../../widgets/common/accent_stat_card.dart';
-import '../../widgets/icons/flame_icon.dart';
-import '../../widgets/icons/sparkle_star_icon.dart';
-import '../../widgets/icons/status_dot.dart';
+import '../../widgets/common/staggered_item.dart';
+import '../../widgets/common/shimmer_loading.dart';
+import '../../widgets/common/section_header.dart';
+import '../../widgets/common/empty_state.dart';
+import '../../widgets/common/count_up_text.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -32,33 +32,72 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final displayName = user?.displayName?.split(' ').first ?? 'Friend';
     final hour = DateTime.now().hour;
     final greeting = hour < 12 ? 'Good morning' : (hour < 17 ? 'Good afternoon' : 'Good evening');
+    final dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    final dayOfWeek = dayNames[DateTime.now().weekday - 1];
 
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: RefreshIndicator(
-          color: AppColors.green,
+          color: AppColors.brand,
           onRefresh: () async {
             ref.invalidate(continueLearningProvider);
             ref.invalidate(recentActivityProvider);
             ref.invalidate(userStreamProvider);
           },
           child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl, vertical: AppSpacing.lg),
+            physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+            padding: AppSpacing.screenH.copyWith(top: 20, bottom: 120),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header
-                StaggeredListItem(
+                // ── Header ──
+                StaggeredItem(
                   index: 0,
-                  child: _buildHeader(context, greeting, displayName, user),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '$greeting,',
+                              style: AppTypography.bodyLg.copyWith(color: AppColors.textTertiary),
+                            ),
+                            Text(displayName, style: AppTypography.headingLg),
+                          ],
+                        ),
+                      ),
+                      AnimatedPressable(
+                        onTap: () => context.go('/profile'),
+                        child: Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceMuted,
+                            shape: BoxShape.circle,
+                          ),
+                          child: PhosphorIcon(
+                            PhosphorIcons.userCircle(PhosphorIconsStyle.fill),
+                            size: 26,
+                            color: AppColors.textTertiary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                StaggeredItem(
+                  index: 1,
+                  child: Text(dayOfWeek, style: AppTypography.bodySm),
                 ),
                 const SizedBox(height: AppSpacing.xxl),
 
-                // Stat cards row
-                StaggeredListItem(
-                  index: 1,
+                // ── Stat Cards ──
+                StaggeredItem(
+                  index: 2,
                   child: userData.when(
                     data: (u) => _buildStatCards(
                       streakDays: u?.currentStreak ?? 0,
@@ -70,36 +109,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
                 const SizedBox(height: AppSpacing.xxxl),
 
-                // Quick Actions
-                StaggeredListItem(
-                  index: 2,
-                  child: Text('Quick Actions', style: AppTypography.headlineSmall),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                StaggeredListItem(
+                // ── Quick Actions ──
+                StaggeredItem(
                   index: 3,
                   child: _buildQuickActions(context),
                 ),
                 const SizedBox(height: AppSpacing.xxxl),
 
-                // Continue Learning
-                StaggeredListItem(
+                // ── Continue Learning ──
+                StaggeredItem(
                   index: 4,
-                  child: Text('Continue Learning', style: AppTypography.headlineSmall),
+                  child: const SectionHeader(title: 'Continue Learning'),
                 ),
-                const SizedBox(height: AppSpacing.md),
                 _buildContinueLearning(context),
                 const SizedBox(height: AppSpacing.xxxl),
 
-                // Recent Activity
-                StaggeredListItem(
+                // ── Recent Activity ──
+                StaggeredItem(
                   index: 6,
-                  child: Text('Recent Activity', style: AppTypography.headlineSmall),
+                  child: const SectionHeader(title: 'Recent Activity'),
                 ),
-                const SizedBox(height: AppSpacing.md),
                 _buildRecentActivity(),
-
-                const SizedBox(height: AppSpacing.xxl),
+                const SizedBox(height: AppSpacing.navbarClearance),
               ],
             ),
           ),
@@ -108,74 +139,60 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildHeader(BuildContext context, String greeting, String displayName, dynamic user) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '$greeting,',
-                style: AppTypography.bodyLarge.copyWith(color: AppColors.textSecondary),
-              ),
-              Text(
-                displayName,
-                style: AppTypography.headlineLarge,
-              ),
-            ],
-          ),
-        ),
-        AnimatedPressable(
-          onTap: () => context.go('/profile'),
-          child: Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              shape: BoxShape.circle,
-              border: Border.all(color: AppColors.border, width: 1.5),
-              image: user?.photoURL != null
-                  ? DecorationImage(
-                      image: NetworkImage(user!.photoURL!),
-                      fit: BoxFit.cover,
-                    )
-                  : null,
-            ),
-            child: user?.photoURL == null
-                ? Center(
-                    child: Icon(
-                      Icons.person_rounded,
-                      color: AppColors.textTertiary,
-                      size: 22,
-                    ),
-                  )
-                : null,
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildStatCards({required int streakDays, required int totalXp}) {
     return Row(
       children: [
         Expanded(
-          child: AccentStatCard(
-            backgroundColor: AppColors.yellowLight,
-            icon: const FlameIcon(size: 24),
-            value: streakDays,
-            label: 'day streak',
+          child: Container(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            decoration: BoxDecoration(
+              color: AppColors.warningLight,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+            ),
+            child: Row(
+              children: [
+                PhosphorIcon(
+                  PhosphorIcons.flame(PhosphorIconsStyle.fill),
+                  size: 20,
+                  color: AppColors.warning,
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    CountUpText(end: streakDays, style: AppTypography.statSm),
+                    Text('day streak', style: AppTypography.bodySm.copyWith(color: AppColors.textSecondary)),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
         const SizedBox(width: AppSpacing.md),
         Expanded(
-          child: AccentStatCard(
-            backgroundColor: AppColors.greenLight,
-            icon: const SparkleStarIcon(size: 24, color: AppColors.green),
-            value: totalXp,
-            label: 'total XP',
+          child: Container(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            decoration: BoxDecoration(
+              color: AppColors.successLight,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+            ),
+            child: Row(
+              children: [
+                PhosphorIcon(
+                  PhosphorIcons.sparkle(PhosphorIconsStyle.fill),
+                  size: 20,
+                  color: AppColors.success,
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    CountUpText(end: totalXp, style: AppTypography.statSm),
+                    Text('total XP', style: AppTypography.bodySm.copyWith(color: AppColors.textSecondary)),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ],
@@ -186,23 +203,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return Row(
       children: [
         _QuickActionPill(
-          icon: Icons.explore_rounded,
+          icon: PhosphorIcons.compass(),
           label: 'Explore',
-          color: AppColors.purple,
+          color: AppColors.brand,
           onTap: () => context.go('/explore'),
         ),
         const SizedBox(width: AppSpacing.sm),
         _QuickActionPill(
-          icon: Icons.school_rounded,
+          icon: PhosphorIcons.brain(),
           label: 'Teach',
-          color: AppColors.blue,
+          color: AppColors.accentTeal,
           onTap: () => context.go('/teach'),
         ),
         const SizedBox(width: AppSpacing.sm),
         _QuickActionPill(
-          icon: Icons.description_rounded,
+          icon: PhosphorIcons.fileText(),
           label: 'Docs',
-          color: AppColors.orange,
+          color: AppColors.accentOrange,
           onTap: () => context.push('/documents'),
         ),
       ],
@@ -215,9 +232,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return continueLearning.when(
       data: (items) {
         if (items.isEmpty) {
-          return _buildEmptyState(
-            icon: Icons.school_rounded,
-            message: 'No courses yet. Explore to start learning!',
+          return EmptyState(
+            icon: PhosphorIcons.bookOpen(),
+            title: 'No courses yet',
+            subtitle: 'Explore to start learning!',
             actionLabel: 'Explore Courses',
             onAction: () => context.go('/explore'),
           );
@@ -225,7 +243,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
         return Column(
           children: items.asMap().entries.map((entry) {
-            return StaggeredListItem(
+            return StaggeredItem(
               index: 5 + entry.key,
               child: _ContinueLearningCard(item: entry.value),
             );
@@ -233,9 +251,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         );
       },
       loading: () => const ShimmerCard(height: 140),
-      error: (_, __) => _buildEmptyState(
-        icon: Icons.error_outline_rounded,
-        message: 'Could not load courses.',
+      error: (_, __) => EmptyState(
+        icon: PhosphorIcons.warning(),
+        title: 'Could not load courses',
       ),
     );
   }
@@ -246,26 +264,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return activity.when(
       data: (events) {
         if (events.isEmpty) {
-          return _buildEmptyState(
-            icon: Icons.history_rounded,
-            message: 'No activity yet. Complete a lesson to start!',
+          return EmptyState(
+            icon: PhosphorIcons.clockCounterClockwise(),
+            title: 'No activity yet',
+            subtitle: 'Complete a lesson to start!',
           );
         }
 
         return Container(
           padding: const EdgeInsets.all(AppSpacing.lg),
           decoration: BoxDecoration(
-            color: AppColors.surfaceElevated,
-            borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
-            border: Border.all(color: AppColors.border, width: 1),
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            boxShadow: AppShadow.sm,
           ),
           child: Column(
             children: events.asMap().entries.map((entry) {
-              return StaggeredListItem(
+              return StaggeredItem(
                 index: 7 + entry.key,
                 child: _ActivityItem(
-                  icon: _iconForEvent(entry.value.type),
-                  iconColor: _colorForEvent(entry.value.type),
+                  type: entry.value.type,
                   title: entry.value.displayTitle,
                   time: _timeAgo(entry.value.timestamp),
                 ),
@@ -277,69 +295,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       loading: () => const ShimmerCard(height: 120),
       error: (_, __) => const SizedBox.shrink(),
     );
-  }
-
-  Widget _buildEmptyState({
-    required IconData icon,
-    required String message,
-    String? actionLabel,
-    VoidCallback? onAction,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.xxl),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
-        border: Border.all(color: AppColors.borderLight, width: 1),
-      ),
-      child: Center(
-        child: Column(
-          children: [
-            Icon(icon, color: AppColors.textTertiary, size: 36),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              message,
-              style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
-              textAlign: TextAlign.center,
-            ),
-            if (actionLabel != null && onAction != null) ...[
-              const SizedBox(height: AppSpacing.lg),
-              ElevatedButton(onPressed: onAction, child: Text(actionLabel)),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  IconData _iconForEvent(String type) {
-    switch (type) {
-      case 'lesson_completed':
-        return Icons.check_circle_rounded;
-      case 'quiz_passed':
-        return Icons.quiz_rounded;
-      case 'teach_completed':
-        return Icons.school_rounded;
-      case 'path_started':
-        return Icons.play_circle_rounded;
-      default:
-        return Icons.info_rounded;
-    }
-  }
-
-  Color _colorForEvent(String type) {
-    switch (type) {
-      case 'lesson_completed':
-        return AppColors.green;
-      case 'quiz_passed':
-        return AppColors.green;
-      case 'teach_completed':
-        return AppColors.purple;
-      case 'path_started':
-        return AppColors.blue;
-      default:
-        return AppColors.blue;
-    }
   }
 
   String _timeAgo(DateTime timestamp) {
@@ -360,72 +315,38 @@ class _ContinueLearningCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final remaining = item.totalLessons - item.completedLessons;
-    final percentText = '${(item.percentComplete * 100).toInt()}%';
-
     return AnimatedPressable(
       onTap: () => context.push('/learn/${item.pathId}'),
       child: Container(
         margin: const EdgeInsets.only(bottom: AppSpacing.md),
         padding: const EdgeInsets.all(AppSpacing.lg),
         decoration: BoxDecoration(
-          color: AppColors.surfaceElevated,
-          borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
-          border: Border.all(color: AppColors.border, width: 1),
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          boxShadow: AppShadow.sm,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: AppColors.purpleLight,
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
-                  ),
-                  child: const Icon(Icons.menu_book_rounded, color: AppColors.purple, size: 22),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.title,
-                        style: AppTypography.titleMedium,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '$remaining lesson${remaining == 1 ? '' : 's'} left',
-                        style: AppTypography.bodySmall.copyWith(color: AppColors.textTertiary),
-                      ),
-                    ],
-                  ),
-                ),
                 Text(
-                  percentText,
-                  style: AppTypography.bodySmall.copyWith(
-                    color: AppColors.green,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  item.title.toUpperCase(),
+                  style: AppTypography.labelSm.copyWith(color: AppColors.brand),
                 ),
+                const Spacer(),
+                PhosphorIcon(PhosphorIcons.arrowRight(), size: 16, color: AppColors.textTertiary),
               ],
             ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(item.title, style: AppTypography.headingMd, maxLines: 1, overflow: TextOverflow.ellipsis),
             const SizedBox(height: AppSpacing.md),
             AnimatedProgressBar(progress: item.percentComplete),
-            if (item.nextLessonTitle != null) ...[
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                'Next: ${item.nextLessonTitle}',
-                style: AppTypography.bodySmall.copyWith(color: AppColors.textTertiary),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              '${item.completedLessons}/${item.totalLessons} lessons',
+              style: AppTypography.bodySm,
+            ),
           ],
         ),
       ),
@@ -435,7 +356,7 @@ class _ContinueLearningCard extends StatelessWidget {
 
 /// Quick action pill button
 class _QuickActionPill extends StatelessWidget {
-  final IconData icon;
+  final PhosphorIconData icon;
   final String label;
   final Color color;
   final VoidCallback onTap;
@@ -456,17 +377,17 @@ class _QuickActionPill extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: AppSpacing.md, horizontal: AppSpacing.sm),
           decoration: BoxDecoration(
             color: color.withAlpha(20),
-            borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
-            border: Border.all(color: color.withAlpha(40), width: 1),
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            border: Border.all(color: color.withAlpha(40)),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: color, size: 18),
+              PhosphorIcon(icon, color: color, size: 18),
               const SizedBox(width: 6),
               Text(
                 label,
-                style: AppTypography.buttonSmall.copyWith(color: color),
+                style: AppTypography.btnMd.copyWith(color: color, fontSize: 13),
               ),
             ],
           ),
@@ -478,43 +399,73 @@ class _QuickActionPill extends StatelessWidget {
 
 /// Activity item row
 class _ActivityItem extends StatelessWidget {
-  final IconData icon;
-  final Color iconColor;
+  final String type;
   final String title;
   final String time;
 
   const _ActivityItem({
-    required this.icon,
-    required this.iconColor,
+    required this.type,
     required this.title,
     required this.time,
   });
 
+  PhosphorIconData _iconForType() {
+    switch (type) {
+      case 'lesson_completed':
+        return PhosphorIcons.checkCircle(PhosphorIconsStyle.fill);
+      case 'quiz_passed':
+        return PhosphorIcons.exam(PhosphorIconsStyle.fill);
+      case 'teach_completed':
+        return PhosphorIcons.brain(PhosphorIconsStyle.fill);
+      case 'path_started':
+        return PhosphorIcons.playCircle(PhosphorIconsStyle.fill);
+      default:
+        return PhosphorIcons.info(PhosphorIconsStyle.fill);
+    }
+  }
+
+  Color _colorForType() {
+    switch (type) {
+      case 'lesson_completed':
+      case 'quiz_passed':
+        return AppColors.success;
+      case 'teach_completed':
+        return AppColors.brand;
+      case 'path_started':
+        return AppColors.info;
+      default:
+        return AppColors.info;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final color = _colorForType();
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
       child: Row(
         children: [
-          StatusDot(
-            state: iconColor == AppColors.green
-                ? StatusDotState.completed
-                : StatusDotState.inProgress,
-            size: 8,
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: color.withAlpha(25),
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+            ),
+            child: Center(
+              child: PhosphorIcon(_iconForType(), size: 16, color: color),
+            ),
           ),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Text(
               title,
-              style: AppTypography.bodyMedium,
+              style: AppTypography.bodyMd,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          Text(
-            time,
-            style: AppTypography.bodySmall.copyWith(color: AppColors.textTertiary),
-          ),
+          Text(time, style: AppTypography.bodySm),
         ],
       ),
     );
